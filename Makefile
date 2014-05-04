@@ -1,8 +1,8 @@
 CFLAGS = --ptxas-options=-v --use_fast_math --compiler-options -Wall
-INCLUDES = 
+INCLUDES =
 
-LDFLAGS = -L cublas
-LIBS = 
+LDFLAGS = -L/opt/cuda/lib64
+LIBS = -lcublas
 
 OBJECTS = main.o aux.o toeplitz.o householder.o
 PROG = atlas

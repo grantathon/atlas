@@ -66,6 +66,18 @@ int main(int argc, char **argv)
     //      the work among kernels and implementing a communication
     //      method.
     
+    /*for(size_t v = 0; v < vMax; v++)
+    {
+        // Copy toeplitz to device
+        
+        for(size_t b = 0; b < dim; b++)
+        {
+            // BlockPairReduction() on specific dimensions of toeplitz_v
+            // Save Q for next call of BlockPairReduction()
+            // Use column for the construction of toeplitz_v+1
+        }
+    }*/
+    
     
     // End timer
     timer.end();  t = timer.get();  // elapsed time in seconds
