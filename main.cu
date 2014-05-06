@@ -28,14 +28,17 @@ int main(int argc, char **argv)
         return -1;
     }
 
+    // Initialize computation parameters
     const int dim = atoi(argv[1]);
     const int diagCnt = atoi(argv[2]);
-    float *cpuToeplitz = new float[dim*dim];
-    int buildToeplitzError = 0;
+    float *cpuToeplitz = (float *)malloc(dim*dim*sizeof(*cpuToeplitz));
+    float *cpuQ = (float *)malloc(dim*dim*sizeof(*cpuQ));
+    float *cpuBlockPairCol = (float *)malloc(dim*sizeof(*cpuBlockPairCol));
 
-    buildToeplitzError = BuildToeplitz(cpuToeplitz, dim, diagCnt);
-    if(buildToeplitzError != 0)
+    int errorCheck = BuildToeplitz(cpuToeplitz, dim, diagCnt);
+    if(errorCheck != 0)
     {
+        cout << "Issue when executing BuildToeplitz()" << endl;
         return -2;
     }
 
@@ -66,6 +69,13 @@ int main(int argc, char **argv)
     //      the work among kernels and implementing a communication
     //      method.
     
+    errorCheck = BlockPairReduction(cpuQ, cpuBlockPairCol, cpuToeplitz, dim);
+    if(errorCheck != 0)
+    {
+        cout << "Issue when executing BlockPairReduction()" << endl;
+        return -3;
+    }
+
     /*for(size_t v = 0; v < vMax; v++)
     {
         // Copy toeplitz to device
@@ -87,7 +97,9 @@ int main(int argc, char **argv)
     cudaFree(gpuToeplitz); CUDA_CHECK;
 
     // Free heap memory
-    delete[] cpuToeplitz;
+    free(cpuToeplitz);
+    free(cpuQ);
+    free(cpuBlockPairCol);
     
     return 0;
 }
