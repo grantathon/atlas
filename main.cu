@@ -12,6 +12,7 @@
 // ###
 
 #include <iostream>
+#include <stdio.h>
 #include "aux.h"
 #include "toeplitz.h"
 #include "householder.cuh"
@@ -42,25 +43,14 @@ int main(int argc, char **argv)
         return -2;
     }
 
+    printf("\nToeplitz before:\n");
     PrintMatrix(cpuToeplitz, dim, dim);
-    
-    // Allocate memory on the GPU and copy data
-    float *gpuToeplitz;
-    cudaMalloc(&gpuToeplitz, (size_t)dim*dim*sizeof(float)); CUDA_CHECK;
-    cudaMemcpy(gpuToeplitz, cpuToeplitz, (size_t)dim*dim*sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
-
-    // Init block and grid sizes
-    dim3 block = dim3(32, 8, 1);
-    dim3 grid = dim3((dim+block.x-1)/block.x, (dim+block.y-1)/block.y, 1);
-
-    // Review the grid dimensions
-    cout << "grid.x=" << grid.x << " grid.y=" << grid.y << " grid.z=" << grid.z << endl;
 
     // Start timer
     Timer timer;
     float t = timer.get();
     timer.start();
-    
+
     // Perform GPU computations
     
     // TODO: Test the block-pair reduction algo on one input matrix
@@ -76,6 +66,9 @@ int main(int argc, char **argv)
         return -3;
     }
 
+    // End timer
+    timer.end();  t = timer.get();  // elapsed time in seconds
+    
     /*for(size_t v = 0; v < vMax; v++)
     {
         // Copy toeplitz to device
@@ -88,19 +81,22 @@ int main(int argc, char **argv)
         }
     }*/
     
-    
-    // End timer
-    timer.end();  t = timer.get();  // elapsed time in seconds
-    cout << "time GPU: " << t*1000<<" ms" << endl;
-    
-	// Free GPU memory
-    cudaFree(gpuToeplitz); CUDA_CHECK;
+    // Print results
+    printf("\nToeplitz after:\n");
+    PrintMatrix(cpuToeplitz, dim, dim);
+    printf("\nQ:\n");
+    PrintMatrix(cpuQ, dim, dim);
+    printf("\nBlock pair column:\n");
+    PrintVector(cpuBlockPairCol, dim);
+
+    // Display GPU run time
+    cout << "\ntime GPU: " << t*1000<<" ms" << endl;
 
     // Free heap memory
     free(cpuToeplitz);
     free(cpuQ);
     free(cpuBlockPairCol);
-    
+
     return 0;
 }
 

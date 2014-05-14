@@ -19,6 +19,10 @@
 #include <string>
 #include <sstream>
 
+
+void PrintMatrix(float *matrix, int m, int n);
+void PrintVector(float *vector, int m);
+
 // parameter processing
 template<typename T>
 bool getParam(std::string param, T &var, int argc, char **argv)

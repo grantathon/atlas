@@ -31,7 +31,7 @@ __global__ void ComputeHouseVec(float *v, float *a_col, float alpha, float r, in
     }
 }
 
-/* Computes the Q matrix of the Householder transformation */
+/* Prepare Q matrix for Householder transformation */
 __global__ void ComputeQ(float *q, float *v, int dim)
 {
     int x = threadIdx.x + blockIdx.x*blockDim.x;
@@ -39,15 +39,13 @@ __global__ void ComputeQ(float *q, float *v, int dim)
     
     if(x < dim && y < dim)
     {
-        const int idx = x + y*dim;
-
         if(x == y)  // Compute diagonal value
         {
-            q[idx] = 1.0f - 2*powf(v[x], 2);
+            q[IDX2C(y, x, dim)] = 1.0f - 2*powf(v[x], 2);
         }
         else  // Compute symmetric values
         {
-            q[idx] = -2*v[x]*v[y];
+            q[IDX2C(y, x, dim)] = -2*v[x]*v[y];
         }
     }
 }
@@ -57,113 +55,85 @@ __inline__ int UpdateBlockPair(float *block_pair, float *v, float *q, int dim)
 {
     cublasStatus_t stat;
     cublasHandle_t handle;
-    float *gpuQ, *gpuBlockPair, *gpuTempMatrix;
+    float *cublasBlockPair, *cublasTempMatrix, *cublasQ;
     float alpha = 1.0f;
-    float beta = 1.0f;
+    float beta = 0.0f;
     
     // Allocate memory on the GPU
-    cudaMalloc(&gpuQ, (size_t)dim*dim*sizeof(*gpuQ)); CUDA_CHECK;
-    cudaMalloc(&gpuBlockPair, (size_t)dim*dim*sizeof(*gpuBlockPair)); CUDA_CHECK;
-    cudaMalloc(&gpuTempMatrix, (size_t)dim*dim*sizeof(*gpuTempMatrix)); CUDA_CHECK;
-    cudaMemset(gpuQ, 0, (size_t)dim*sizeof(*gpuQ)); CUDA_CHECK;
-
-    /* Compute Q */
-
-    dim3 block = dim3(64, 8, 1);
-    dim3 grid = dim3((dim + block.x-1)/block.x, (dim + block.y-1)/block.y, 1);
-
-    // Perform Q computation
-    ComputeQ<<<grid, block>>>(gpuQ, v, dim);
-    cudaMemcpy(q, gpuQ, (size_t)dim*dim*sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
-
-    printf("\nNew Q:\n");
-    PrintMatrix(q, dim, dim);
-    printf("\n");
-    
-    /* Compute block pair */
-    // TODO: Fix indexing issue with cuBLAS
+    cudaMalloc(&cublasBlockPair, (size_t)dim*dim*sizeof(*cublasBlockPair)); CUDA_CHECK;
+    cudaMalloc(&cublasTempMatrix, (size_t)dim*dim*sizeof(*cublasTempMatrix)); CUDA_CHECK;
+    cudaMalloc(&cublasQ, (size_t)dim*dim*sizeof(*cublasQ)); CUDA_CHECK;
+   
+    /* Update block pair */
 
     // Create cuBLAS handle
     stat = cublasCreate(&handle);
     if (stat != CUBLAS_STATUS_SUCCESS) {
         printf ("CUBLAS initialization failed\n");
-        cudaFree(gpuQ);
-        cudaFree(gpuBlockPair);
-        cudaFree(gpuTempMatrix);
+        cudaFree(cublasQ);
+        cudaFree(cublasBlockPair);
+        cudaFree(cublasTempMatrix);
         return -1;
     }
     
     // Initialize Q matrix
-    stat = cublasSetMatrix(dim, dim, sizeof(*q), q, dim, gpuQ, dim);
+    stat = cublasSetMatrix(dim, dim, sizeof(*q), q, dim, cublasQ, dim);
     if (stat != CUBLAS_STATUS_SUCCESS) {
         printf ("data download failed");
-        cudaFree(gpuQ);
-        cudaFree(gpuBlockPair);
-        cudaFree(gpuTempMatrix);
+        cudaFree(cublasQ);
+        cudaFree(cublasBlockPair);
+        cudaFree(cublasTempMatrix);
         cublasDestroy(handle);
         return -2;
     }
     
     // Initialize block pair matrix
-    stat = cublasSetMatrix(dim, dim, sizeof(*block_pair), block_pair, dim, gpuBlockPair, dim);
+    stat = cublasSetMatrix(dim, dim, sizeof(*block_pair), block_pair, dim, cublasBlockPair, dim);
     if (stat != CUBLAS_STATUS_SUCCESS) {
         printf ("data download failed");
-        cudaFree(gpuQ);
-        cudaFree(gpuBlockPair);
-        cudaFree(gpuTempMatrix);
+        cudaFree(cublasQ);
+        cudaFree(cublasBlockPair);
+        cudaFree(cublasTempMatrix);
         cublasDestroy(handle);
         return -3;
     }
 
-    // Perform block pair computation
-    stat = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, dim, dim, dim, &alpha, gpuQ, dim, gpuBlockPair, dim, &beta, gpuTempMatrix, dim);
+    // Perform block pair computations
+    stat = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, dim, dim, dim, &alpha, cublasQ, dim, cublasBlockPair, dim, &beta, cublasTempMatrix, dim);
     if (stat != CUBLAS_STATUS_SUCCESS) {
         printf ("data download failed");
-        cudaFree(gpuQ);
-        cudaFree(gpuBlockPair);
-        cudaFree(gpuTempMatrix);
+        cudaFree(cublasQ);
+        cudaFree(cublasBlockPair);
+        cudaFree(cublasTempMatrix);
         cublasDestroy(handle);
         return -6;
     }
 
-    stat = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, dim, dim, dim, &alpha, gpuTempMatrix, dim, gpuQ, dim, &beta, gpuBlockPair, dim);
+    stat = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, dim, dim, dim, &alpha, cublasTempMatrix, dim, cublasQ, dim, &beta, cublasBlockPair, dim);
     if (stat != CUBLAS_STATUS_SUCCESS) {
         printf ("data download failed");
-        cudaFree(gpuQ);
-        cudaFree(gpuBlockPair);
-        cudaFree(gpuTempMatrix);
+        cudaFree(cublasQ);
+        cudaFree(cublasBlockPair);
+        cudaFree(cublasTempMatrix);
         cublasDestroy(handle);
         return -7;
     }
 
-    // Retreive Q matrix
-    stat = cublasGetMatrix(dim, dim, sizeof(*q), gpuQ, dim, q, dim);
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf ("data upload failed");
-        cudaFree(gpuQ);
-        cudaFree(gpuBlockPair);
-        cublasDestroy(handle);
-        return -4;
-    }
-
     // Retreive block pair matrix
-    stat = cublasGetMatrix(dim, dim, sizeof(*block_pair), gpuBlockPair, dim, block_pair, dim);
+    stat = cublasGetMatrix(dim, dim, sizeof(*block_pair), cublasBlockPair, dim, block_pair, dim);
     if (stat != CUBLAS_STATUS_SUCCESS) {
         printf ("data upload failed");
-        cudaFree(gpuQ);
-        cudaFree(gpuBlockPair);
+        cudaFree(cublasQ);
+        cudaFree(cublasBlockPair);
+        cudaFree(cublasTempMatrix);
         cublasDestroy(handle);
         return -5;
     }
 
-    printf("New block pair:\n");
-    PrintMatrix(block_pair, dim, dim);
-    printf("\n");
-    
     // Free GPU memory
-    cudaFree(gpuQ);
-    cudaFree(gpuBlockPair);
-    cudaFree(gpuTempMatrix);
+    cudaFree(cublasQ);
+    cudaFree(cublasBlockPair);
+    cudaFree(cublasTempMatrix);
     cublasDestroy(handle);
 
     return 0;
@@ -179,11 +149,9 @@ int BlockPairReduction(float *q, float *column, float *block_pair, int dim)
     float *v = (float *)malloc(dim*sizeof(*v));
 
     // Retreive first column of block pair
-    printf("Before transformation:\n");
     for(int i = 0; i < dim; i++)
     {
         column[i] = block_pair[dim*i];
-        printf("  column[%u] = %f\n", i, column[i]);
     }
 
     // Compute alpha
@@ -204,42 +172,44 @@ int BlockPairReduction(float *q, float *column, float *block_pair, int dim)
     r = sqrtf((powf(alpha, 2) - column[1]*alpha) / 2);
 
     // Allocate memory on the GPU and copy data
-    float *gpuV, *gpuColumn;
+    float *gpuV, *gpuColumn, *gpuQ;
     cudaMalloc(&gpuV, (size_t)dim*sizeof(float)); CUDA_CHECK;
     cudaMalloc(&gpuColumn, (size_t)dim*sizeof(float)); CUDA_CHECK;
+    cudaMalloc(&gpuQ, (size_t)dim*dim*sizeof(*gpuQ)); CUDA_CHECK;
     cudaMemset(gpuV, 0, (size_t)dim*sizeof(float)); CUDA_CHECK;
     cudaMemcpy(gpuColumn, column, (size_t)dim*sizeof(float), cudaMemcpyHostToDevice); CUDA_CHECK;
-
-    // Init block and grid sizes
-    dim3 block = dim3(256, 1, 1);
-    dim3 grid = dim3((dim + block.x-1)/block.x, 1, 1);
+    cudaMemset(gpuQ, 0, (size_t)dim*dim*sizeof(*gpuQ)); CUDA_CHECK;
 
     // TODO: Put all GPU operations into one kernel
 
+    // Init block and grid sizes
+    dim3 block = dim3(512, 1, 1);
+    dim3 grid = dim3((dim + block.x-1)/block.x, 1, 1);
+
     ComputeHouseVec<<<grid, block>>>(gpuV, gpuColumn, alpha, r, dim);
+    block = dim3(32, 32, 1);
+    grid = dim3((dim + block.x-1)/block.x, (dim + block.y-1)/block.y, 1);
+
+    // Perform Q computation
+    cudaDeviceSynchronize();
+    ComputeQ<<<grid, block>>>(gpuQ, gpuV, dim);
+    cudaMemcpy(q, gpuQ, (size_t)dim*dim*sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
+
     UpdateBlockPair(block_pair, gpuV, q, dim);
 
-    // TODO: Retreive column!
-
     // Copy data back to CPU and free GPU memory
-    cudaMemcpy(v, gpuV, (size_t)dim*sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
     cudaMemcpy(column, gpuColumn, (size_t)dim*sizeof(float), cudaMemcpyDeviceToHost); CUDA_CHECK;
     cudaFree(gpuV); CUDA_CHECK;
     cudaFree(gpuColumn); CUDA_CHECK;
+    cudaFree(gpuQ); CUDA_CHECK;
 
-    printf("After transformation:\n");
+    // Retreive first column of block pair
     for(int i = 0; i < dim; i++)
     {
-        printf("  column[%u] = %f\n", i, column[i]);
-    }
-    for(int i = 0; i < dim; i++)
-    {
-        printf("  v[%u] = %f\n", i, v[i]);
+        column[i] = block_pair[i*dim];
     }
 
     free(v);
-    
-    // TODO: The function should return the Q and the first column.
     
     return 0;
 }

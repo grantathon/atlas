@@ -14,6 +14,9 @@
 #include "aux.h"
 #include <cstdlib>
 #include <iostream>
+#include <stdio.h>
+
+#define IDX2C(i, j, ld) (((j)*(ld))+(i))
 
 using std::stringstream;
 using std::cerr;
@@ -55,4 +58,28 @@ void cuda_check(string file, int line)
     }
     prev_file = file;
     prev_line = line;
+}
+
+void PrintMatrix(float *matrix, int m, int n)
+{
+    for(unsigned long i = 0; i < (size_t)m; i++)
+    {
+        printf("|");
+
+        for(unsigned long j = 0; j < (size_t)n; j++)
+        {
+            const size_t idx = j + m*i;
+            printf(" %1.2f", matrix[idx]);
+        }
+
+        printf(" |\n");
+    }
+}
+
+void PrintVector(float *vector, int m)
+{
+    for(unsigned long i = 0; i < (size_t)m; i++)
+    {
+        printf("| %1.2f |\n", vector[i]);
+    }
 }
