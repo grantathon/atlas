@@ -4,7 +4,7 @@
 /* Builds a Toeplitz matrix */
 int BuildToeplitz(float *t_matrix, int dim, int diag_cnt);
 
-/* Outputs matrix */
-void PrintMatrix(float *matrix, int m, int n);
+/* Builds a symmetric Toeplitz matrix */
+int BuildSymmetricToeplitz(float *t_matrix, int dim, int diag_cnt);
 
 #endif

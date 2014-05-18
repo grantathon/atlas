@@ -13,6 +13,7 @@
 
 #include <iostream>
 #include <stdio.h>
+#include <vector>
 #include "aux.h"
 #include "toeplitz.h"
 #include "householder.cuh"
@@ -32,18 +33,18 @@ int main(int argc, char **argv)
     // Initialize computation parameters
     const int dim = atoi(argv[1]);
     const int diagCnt = atoi(argv[2]);
+    float *cpuBlockPairCol, *cpuQ; 
     float *cpuToeplitz = (float *)malloc(dim*dim*sizeof(*cpuToeplitz));
-    float *cpuQ = (float *)malloc(dim*dim*sizeof(*cpuQ));
-    float *cpuBlockPairCol = (float *)malloc(dim*sizeof(*cpuBlockPairCol));
 
-    int errorCheck = BuildToeplitz(cpuToeplitz, dim, diagCnt);
+    // int errorCheck = BuildToeplitz(cpuToeplitz, dim, diagCnt);
+    int errorCheck = BuildSymmetricToeplitz(cpuToeplitz, dim, diagCnt);
     if(errorCheck != 0)
     {
         cout << "Issue when executing BuildToeplitz()" << endl;
         return -2;
     }
 
-    printf("\nToeplitz before:\n");
+    cout << endl << "Toeplitz before:" << endl;
     PrintMatrix(cpuToeplitz, dim, dim);
 
     // Start timer
@@ -58,44 +59,36 @@ int main(int argc, char **argv)
     //      matrix. If this works, begin algo 3.1 of paper by distributing
     //      the work among kernels and implementing a communication
     //      method.
-    
-    errorCheck = BlockPairReduction(cpuQ, cpuBlockPairCol, cpuToeplitz, dim);
-    if(errorCheck != 0)
+
+    // Compute tridiagonal matrix
+    for(int b = 0; b < (dim - 2); b++)
     {
-        cout << "Issue when executing BlockPairReduction()" << endl;
-        return -3;
+        cpuBlockPairCol = (float *)malloc((dim - b)*sizeof(*cpuBlockPairCol));
+        cpuQ = (float *)malloc((dim - b)*(dim - b)*sizeof(*cpuQ));
+
+        // BlockPairReduction() on specific Toeplitz block pair
+        errorCheck = BlockPairReduction(cpuQ, cpuBlockPairCol, cpuToeplitz, dim, b);
+        if(errorCheck != 0)
+        {
+            cout << "Issue when executing BlockPairReduction()" << endl;
+            return -3;
+        }
+
+        cout << endl << "Toeplitz after:" << endl;
+        PrintMatrix(cpuToeplitz, dim, dim);
+
+        free(cpuQ);
+        free(cpuBlockPairCol);
     }
 
     // End timer
     timer.end();  t = timer.get();  // elapsed time in seconds
-    
-    /*for(size_t v = 0; v < vMax; v++)
-    {
-        // Copy toeplitz to device
-        
-        for(size_t b = 0; b < dim; b++)
-        {
-            // BlockPairReduction() on specific dimensions of toeplitz_v
-            // Save Q for next call of BlockPairReduction()
-            // Use column for the construction of toeplitz_v+1
-        }
-    }*/
-    
-    // Print results
-    printf("\nToeplitz after:\n");
-    PrintMatrix(cpuToeplitz, dim, dim);
-    printf("\nQ:\n");
-    PrintMatrix(cpuQ, dim, dim);
-    printf("\nBlock pair column:\n");
-    PrintVector(cpuBlockPairCol, dim);
 
     // Display GPU run time
-    cout << "\ntime GPU: " << t*1000<<" ms" << endl;
+    cout << endl << "time GPU: " << t*1000<<" ms" << endl;
 
     // Free heap memory
     free(cpuToeplitz);
-    free(cpuQ);
-    free(cpuBlockPairCol);
 
     return 0;
 }

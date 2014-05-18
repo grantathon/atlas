@@ -13,7 +13,7 @@ int BuildToeplitz(float *t_matrix, int dim, int diag_cnt)
     
     float *diagConsts = (float *)malloc(diag_cnt*sizeof(*diagConsts));
 
-    // Assigns random numbers to the diagonal constants
+    // Assigns "random" numbers to the diagonal constants
     for(size_t i = 0; i < (size_t)diag_cnt; i++)
     {
         diagConsts[i] = ((float)rand() / (float)RAND_MAX);
@@ -42,3 +42,44 @@ int BuildToeplitz(float *t_matrix, int dim, int diag_cnt)
     return 0;
 }
 
+int BuildSymmetricToeplitz(float *t_matrix, int dim, int r)
+{
+    size_t idx = 0;
+    int absXY = 0;
+
+    // Determine parameter validity
+    if(r >= dim)
+    {
+        printf("The variable r less than dim.\n");
+        return -1;
+    }
+    
+    float *diagConsts = (float *)malloc(r*sizeof(*diagConsts));
+
+    // Assigns "random" numbers to the diagonal constants
+    for(size_t i = 0; i < (size_t)(r+1); i++)
+    {
+        diagConsts[i] = ((float)rand() / (float)RAND_MAX);
+    }
+
+    for(size_t y = 0; y < (size_t)dim; y++)
+    {
+        for(size_t x = 0; x < (size_t)dim; x++)
+        {
+            idx = x + (size_t)dim*y;
+            absXY = abs((int)x-(int)y);
+
+            if(absXY > r)
+            {
+                t_matrix[idx] = 0.0;
+            }
+            else
+            {
+                t_matrix[idx] = diagConsts[absXY];
+            }
+        }
+    }
+    
+    free(diagConsts);
+    return 0;
+}
