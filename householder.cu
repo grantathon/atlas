@@ -167,7 +167,6 @@ int UpdateBlockPair(float *block_pair, float *v, float *q, int dim, int shift)
 
 // Reduce the matrix to a tridiagonal matrix via Householder transformations
 int BlockPairReduction(float *q, float *column, float *block_pair, int dim, int shift)
-// int BlockPairReduction(float *q, float *column, float *block_pair, int dim)
 {
     /* HOUSEHOLDER TRANSFORMATION */
     cudaDeviceSynchronize();
