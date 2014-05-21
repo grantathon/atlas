@@ -52,15 +52,7 @@ int main(int argc, char **argv)
     float t = timer.get();
     timer.start();
 
-    // Perform GPU computations
-    
-    // TODO: Test the block-pair reduction algo on one input matrix
-    //      by reading the Q output and the first column of the input
-    //      matrix. If this works, begin algo 3.1 of paper by distributing
-    //      the work among kernels and implementing a communication
-    //      method.
-
-    // Compute tridiagonal matrix
+    // Compute tridiagonal matrix via GPU
     for(int b = 0; b < (dim - 2); b++)
     {
         cpuBlockPairCol = (float *)malloc((dim - b)*sizeof(*cpuBlockPairCol));
