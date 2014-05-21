@@ -18,15 +18,18 @@ __global__ void ComputeHouseVec(float *v, float *a_col, float alpha, float r, in
     
     if(x < n && threadIdx.x != 0)
     {
-        // TODO: Try with shared memory
+        float col_val = a_col[x];
 
-        if(threadIdx.x == 1)
+        if(col_val != 0)  // Only work on non-zero elements
         {
-            v[threadIdx.x] = (a_col[threadIdx.x] - alpha) / (2*r);
-        }
-        else
-        {
-            v[threadIdx.x] = a_col[threadIdx.x] / (2*r);
+            if(threadIdx.x == 1)
+            {
+                v[threadIdx.x] = (col_val - alpha) / (2*r);
+            }
+            else
+            {
+                v[threadIdx.x] = col_val / (2*r);
+            }
         }
     }
 }
@@ -39,13 +42,19 @@ __global__ void ComputeQ(float *q, float *v, int dim)
     
     if(x < dim && y < dim)
     {
-        if(x == y)  // Compute diagonal value
+        float x_val = v[x];
+        float y_val = v[y];
+
+        if(x_val != 0)
         {
-            q[IDX2C(y, x, dim)] = 1.0f - 2.0f*powf(fabs(v[x]), 2.0);
-        }
-        else  // Compute symmetric values
-        {
-            q[IDX2C(y, x, dim)] = -2.0f*v[x]*v[y];
+            if(x == y)  // Compute diagonal value
+            {
+                q[IDX2C(y, x, dim)] = 1.0f - 2.0f*powf(fabs(x_val), 2.0);
+            }
+            else  if(y_val != 0)// Compute symmetric values
+            {
+                q[IDX2C(y, x, dim)] = -2.0f*x_val*y_val;
+            }
         }
     }
 }
@@ -222,8 +231,7 @@ int BlockPairReduction(float *q, float *column, float *block_pair, int dim, int 
     ComputeQ<<<grid, block>>>(gpuQ, gpuV, (dim - shift));
     cudaMemcpy(q, gpuQ, (size_t)(dim - shift)*(dim - shift)*sizeof(*gpuQ), cudaMemcpyDeviceToHost); CUDA_CHECK;
 
-    // UpdateBlockPair(block_pair, gpuV, q, dim);
-    // UpdateBlockPair(block_pair, gpuV, q, (dim - shift));
+    // Update elements of input matrix
     UpdateBlockPair(block_pair, gpuV, q, (dim - shift), shift);
 
     // Copy data back to CPU and free GPU memory
@@ -239,6 +247,7 @@ int BlockPairReduction(float *q, float *column, float *block_pair, int dim, int 
     }
 
     free(v);
+
     return 0;
 }
 

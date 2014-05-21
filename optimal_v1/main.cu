@@ -2,6 +2,9 @@
 // ###
 // ### Symmetric Banded Matrix Reduction to Tridiagonal Form via Householder Transformations
 // ### 
+// ### 
+// ### Approach: Host loops through kernel that performs one Householder iteration
+// ### 
 // ###
 // ### Grant Bartel, grant.bartel@tum.de
 // ### Christoph Riesinger, riesinge@in.tum.de
@@ -36,16 +39,15 @@ int main(int argc, char **argv)
     float *cpuBlockPairCol, *cpuQ; 
     float *cpuToeplitz = (float *)malloc(dim*dim*sizeof(*cpuToeplitz));
 
-    // int errorCheck = BuildToeplitz(cpuToeplitz, dim, diagCnt);
     int errorCheck = BuildSymmetricToeplitz(cpuToeplitz, dim, diagCnt);
     if(errorCheck != 0)
     {
-        cout << "Issue when executing BuildToeplitz()" << endl;
+        cout << "Issue when executing BuildSymmetricToeplitz()" << endl;
         return -2;
     }
 
-    cout << endl << "Toeplitz before:" << endl;
-    PrintMatrix(cpuToeplitz, dim, dim);
+    // cout << endl << "Toeplitz before:" << endl;
+    // PrintMatrix(cpuToeplitz, dim, dim);
 
     // Start timer
     Timer timer;
@@ -70,8 +72,8 @@ int main(int argc, char **argv)
         free(cpuBlockPairCol);
     }
 
-    cout << endl << "Toeplitz after:" << endl;
-    PrintMatrix(cpuToeplitz, dim, dim);
+    // cout << endl << "Toeplitz after:" << endl;
+    // PrintMatrix(cpuToeplitz, dim, dim);
 
     // End timer
     timer.end();  t = timer.get();  // elapsed time in seconds

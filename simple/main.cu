@@ -2,6 +2,9 @@
 // ###
 // ### Symmetric Banded Matrix Reduction to Tridiagonal Form via Householder Transformations
 // ### 
+// ### 
+// ### Approach: Host loops through function that performs one Householder iteration
+// ### 
 // ###
 // ### Grant Bartel, grant.bartel@tum.de
 // ### Christoph Riesinger, riesinge@in.tum.de
