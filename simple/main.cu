@@ -47,8 +47,8 @@ int main(int argc, char **argv)
         return -2;
     }
 
-    cout << endl << "Toeplitz before:" << endl;
-    PrintMatrix(cpuToeplitz, dim, dim);
+    // cout << endl << "Toeplitz before:" << endl;
+    // PrintMatrix(cpuToeplitz, dim, dim);
 
     // Start timer
     Timer timer;
@@ -73,8 +73,8 @@ int main(int argc, char **argv)
         free(cpuBlockPairCol);
     }
 
-    cout << endl << "Toeplitz after:" << endl;
-    PrintMatrix(cpuToeplitz, dim, dim);
+    // cout << endl << "Toeplitz after:" << endl;
+    // PrintMatrix(cpuToeplitz, dim, dim);
 
     // End timer
     timer.end();  t = timer.get();  // elapsed time in seconds

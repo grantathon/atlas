@@ -18,7 +18,7 @@ __global__ void ComputeHouseVec(float *v, float *a_col, float alpha, float r, in
     
     if(x < n && threadIdx.x != 0)
     {
-        float col_val = a_col[x];
+        float col_val = a_col[threadIdx.x];
 
         if(col_val != 0)  // Only work on non-zero elements
         {
@@ -45,16 +45,25 @@ __global__ void ComputeQ(float *q, float *v, int dim)
         float x_val = v[x];
         float y_val = v[y];
 
-        if(x_val != 0)
+        // if(x < dim && y < dim)
+        // {
+        //     if(x == y)  // Compute diagonal value
+        //     {
+        //         q[IDX2C(y, x, dim)] = 1.0f - 2.0f*powf(fabs(v[x]), 2.0);
+        //     }
+        //     else  // Compute symmetric values
+        //     {
+        //         q[IDX2C(y, x, dim)] = -2.0f*v[x]*v[y];
+        //     }
+        // }
+
+        if(x == y)  // Compute diagonal value
         {
-            if(x == y)  // Compute diagonal value
-            {
-                q[IDX2C(y, x, dim)] = 1.0f - 2.0f*powf(fabs(x_val), 2.0);
-            }
-            else  if(y_val != 0)// Compute symmetric values
-            {
-                q[IDX2C(y, x, dim)] = -2.0f*x_val*y_val;
-            }
+            q[IDX2C(y, x, dim)] = 1.0f - 2.0f*powf(fabs(x_val), 2.0);
+        }
+        else  if(y_val != 0)  // Compute symmetric values
+        {
+            q[IDX2C(y, x, dim)] = -2.0f*x_val*y_val;
         }
     }
 }
