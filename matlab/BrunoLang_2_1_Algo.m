@@ -9,6 +9,9 @@ d = 2;  % semi-diagonal size (e.g., 1 = trididagonal A)
 unit = zeros(d, 1);
 unit(1) = 1;
 
+% UNCOMMENT THIS CODE BLOCK TO DYNAMICALLY CREATE SYMMETRIC TOEPLITZ
+% MATRICES. DON'T FORGET THE COMMENT OUT THE A MATRICES BELOW!
+%
 % Build symmetric Toeplitz
 % temp = rand(1, (diagRadius+1));
 % for i=(diagRadius + 2):dim
@@ -40,9 +43,10 @@ A = [   0.78 0.39 0.84 0.00 0.00 0.00 0.00;
 % Main loop
 for u = 1:(n-2)
     % Determine b & r iteration parameters
-    [b, r] = BrunoLang_2_1_Find_b_r(n, d, u);
+    %[b, r] = BrunoLang_2_1_Find_b_r(n, d, u);
+    b = floor((n - u) / d);
+    r = n - u - d*(b - 1);
     
-    % TODO: Find out what we should do when b & r are no longer computable
     if(b == 0)
         disp('The parameters b & r are undeterminable. Algo terminated!')
         break;
@@ -59,15 +63,8 @@ for u = 1:(n-2)
         v(k) = A((k + (u-1)), u) / (2*rad);
     end
     
-%     v = zeros(d, 1);
-%     v(1) = (A((u+1), u) - alpha) / (2*rad);
-%     for k=2:d
-%         v(k) = A(k, u) / (2*rad);
-%     end
-    
     % Compute Q1
     Q1 = eye(d) - 2*v(2:(d+1))*transpose(v(2:(d+1)));
-%     Q1 = eye(d) - 2*v*transpose(v);
 
     % Compute new column/row of A
     A((u+1):(u+d), u) = Q1 * A((u+1):(u+d), u);

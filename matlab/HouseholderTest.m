@@ -2,30 +2,39 @@ clear all;
 tic;
 
 % Inputs
-dim = 500;
-diagRadius = 3;
+dim = 7;
 
+% UNCOMMENT THIS CODE BLOCK TO DYNAMICALLY CREATE SYMMETRIC TOEPLITZ
+% MATRICES. DON'T FORGET THE COMMENT OUT THE A MATRICES BELOW!
+%
+% diagRadius = 3;
+% 
 % Build symmetric Toeplitz
-temp = rand(1, (diagRadius+1));
-for i=(diagRadius + 2):dim
-    temp = [temp 0];
-end
-A = toeplitz(temp);
-
-clear temp diagRadius;
+% temp = rand(1, (diagRadius+1));
+% for i=(diagRadius + 2):dim
+%     temp = [temp 0];
+% end
+% A = toeplitz(temp);
+% 
+% clear temp diagRadius;
 
 % A = [ 4 1 -2 2;
 %       1 2 0 1;
 %       -2 0 3 -2;
 %       2 1 -2 -1; ];
+%   
+% A = [   0.78 0.39 0.84 0.00;
+%         0.39 0.78 0.39 0.84;
+%         0.84 0.39 0.78 0.39;
+%         0.00 0.84 0.39 0.78; ]
 
-% A = [   0.78 0.80 0.91 0.00 0.00 0.00 0.00;
-%         0.39 0.78 0.80 0.91 0.00 0.00 0.00;
-%         0.84 0.39 0.78 0.80 0.91 0.00 0.00;
-%         0.00 0.84 0.39 0.78 0.80 0.91 0.00;
-%         0.00 0.00 0.84 0.39 0.78 0.80 0.91;
-%         0.00 0.00 0.00 0.84 0.39 0.78 0.80;
-%         0.00 0.00 0.00 0.00 0.84 0.39 0.78; ]
+A = [   0.78 0.39 0.84 0.00 0.00 0.00 0.00;
+        0.39 0.78 0.39 0.84 0.00 0.00 0.00;
+        0.84 0.39 0.78 0.39 0.84 0.00 0.00;
+        0.00 0.84 0.39 0.78 0.39 0.84 0.00;
+        0.00 0.00 0.84 0.39 0.78 0.39 0.84;
+        0.00 0.00 0.00 0.84 0.39 0.78 0.39;
+        0.00 0.00 0.00 0.00 0.84 0.39 0.78; ]
 
 for b=0:(dim-3)
     % Compute Householder parameters
@@ -47,6 +56,7 @@ for b=0:(dim-3)
     % Compute new elements of A
     A(1+b:dim, 1+b:dim) = Q*A(1+b:dim, 1+b:dim)*Q;
 end
+A
 
 toc
 clear Q alpha b dim i k r v;
