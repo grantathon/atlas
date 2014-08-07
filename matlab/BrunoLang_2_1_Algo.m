@@ -45,6 +45,11 @@ for u = 1:(n-2)
     % Determine b & r iteration parameters
     b = floor((n - u) / d)
     r = n - u - d*(b - 1)
+    if(r > d)
+%         disp('Correction to b & r')
+        b = b + floor(r / d)
+        r = r - d*floor(r / d)
+    end
 
     Q1 = ComputeQ(A((u+1):n, u), d);
     
