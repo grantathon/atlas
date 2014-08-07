@@ -43,49 +43,43 @@ A = [   0.78 0.39 0.84 0.00 0.00 0.00 0.00;
 % Main loop
 for u = 1:(n-2)
     % Determine b & r iteration parameters
-    %[b, r] = BrunoLang_2_1_Find_b_r(n, d, u);
-    b = floor((n - u) / d);
-    r = n - u - d*(b - 1);
+    b = floor((n - u) / d)
+    r = n - u - d*(b - 1)
+
+    Q1 = ComputeQ(A((u+1):n, u), d);
     
-    if(b == 0)
-        disp('The parameters b & r are undeterminable. Algo terminated!')
-        break;
-    end
-
-    % Compute Householder parameters
-    alpha = -sign(A((u+1), u))*norm(A((u+1):(u+d), u));
-    rad = sqrt((alpha^2 - A((u+1), u)*alpha) / 2);
-
-    % Compute Householder vector
-    v = zeros(d+1, 1);
-    v(2) = (A((u+1), u) - alpha) / (2*rad);
-    for k=3:(d+1)
-        v(k) = A((k + (u-1)), u) / (2*rad);
-    end
-    
-    % Compute Q1
-    Q1 = eye(d) - 2*v(2:(d+1))*transpose(v(2:(d+1)));
-
     % Compute new column/row of A
     A((u+1):(u+d), u) = Q1 * A((u+1):(u+d), u);
     A(u, (u+1):(u+d)) = A((u+1):(u+d), u);
     
     % Distribute the Qs among the other parts of A for proper trasformation
     for beta = 1:b
-        bd_idx_a = u + 2*beta - 1;
-        bd_idx_b = u + beta*d;
-        
         % Compute the block-diagonal
-        A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) = transpose(Q1) * A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) * Q1;
-        
+        if(beta ~= b)
+            bd_idx_a = u + 2*beta - 1;
+            bd_idx_b = u + beta*d;
+            A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) = transpose(Q1) * A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) * Q1;
+        else
+            if(b ~= 1)
+                A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) = transpose(Q1) * A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) * Q1;
+            else
+                Q1 = ComputeQ(A((u+1):n, u+1), r);
+                
+                bd_idx_c = bd_idx_a + d - 1; %r;
+                bd_idx_d = bd_idx_b + r - 1;
+                
+                A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) = transpose(Q1) * A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) * Q1;
+            end
+        end
+            
         % Compute the block-diagonal's bottom-right neighbor blocks
-        if(beta < b)
+        if(beta < b-1)
             bd_idx_c = bd_idx_a + d;
             bd_idx_d = bd_idx_b + d;
             
             % Compute Q2 for upper-/lower-triangularization of neighbors
             A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) = A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) * Q1;
-            w = A(bd_idx_c:(bd_idx_d), bd_idx_a) + sign(A(bd_idx_c, bd_idx_a))*norm(A(bd_idx_c:(bd_idx_d), bd_idx_a)).*unit;
+            w = A(bd_idx_c:bd_idx_d, bd_idx_a) + sign(A(bd_idx_c, bd_idx_a))*norm(A(bd_idx_c:bd_idx_d, bd_idx_a)).*unit;
             v = w./norm(w);
             Q2 = eye(d) - 2*v(1:d)*transpose(v(1:d));
             
@@ -95,8 +89,41 @@ for u = 1:(n-2)
             
             % Copy over new Q1
             Q1 = Q2;
+        elseif(beta == b-1)
+%             if(b ~= 1)
+                bd_idx_c = bd_idx_a + d %r;
+                bd_idx_d = bd_idx_b + r
+%             else
+%                 bd_idx_c = bd_idx_a + d - 1 %r;
+%                 bd_idx_d = bd_idx_b + r - 1
+%             end
+            
+            % Compute Q2 for upper-/lower-triangularization of neighbors
+            A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) = A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) * Q1;
+%             return;
+            
+            % Alter unit vector dimension to r
+            unit = zeros(r, 1);
+            unit(1) = 1;
+            
+            w = A(bd_idx_c:bd_idx_d, bd_idx_a) + sign(A(bd_idx_c, bd_idx_a))*norm(A(bd_idx_c:bd_idx_d, bd_idx_a)).*unit;
+            v = w./norm(w);
+            Q2 = eye(r) - 2*v(1:r)*transpose(v(1:r))
+            
+            % Compute new bottom/right neighbors of block-diagonal of A
+            A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) = transpose(Q2) * A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b);
+            A(bd_idx_a:bd_idx_b, bd_idx_c:bd_idx_d) = transpose(A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b));
+                
+            Q1 = Q2;
+
+            % Reset altered unit vector dimension to d
+            unit = zeros(d, 1);
+            unit(1) = 1;
+            
+            disp 'beta == b-1';
         end
     end
+    A
 end
 
 A
