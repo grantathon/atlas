@@ -43,12 +43,11 @@ A = [   0.78 0.39 0.84 0.00 0.00 0.00 0.00;
 % Main loop
 for u = 1:(n-2)
     % Determine b & r iteration parameters
-    b = floor((n - u) / d)
-    r = n - u - d*(b - 1)
+    b = floor((n - u) / d);
+    r = n - u - d*(b - 1);
     if(r > d)
-%         disp('Correction to b & r')
-        b = b + floor(r / d)
-        r = r - d*floor(r / d)
+        b = b + floor(r / d);
+        r = r - d*floor(r / d);
     end
 
     Q1 = ComputeQ(A((u+1):n, u), d);
@@ -65,16 +64,12 @@ for u = 1:(n-2)
             bd_idx_b = u + beta*d;
             A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) = transpose(Q1) * A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) * Q1;
         else
-            if(b ~= 1)
-                A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) = transpose(Q1) * A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) * Q1;
-            else
-                Q1 = ComputeQ(A((u+1):n, u+1), r);
-                
-                bd_idx_c = bd_idx_a + d - 1; %r;
-                bd_idx_d = bd_idx_b + r - 1;
-                
-                A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) = transpose(Q1) * A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) * Q1;
+            if(b == 1)
+                bd_idx_c = bd_idx_a + d - 1;
+                bd_idx_d = bd_idx_b + r - 1;    
             end
+            
+            A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) = transpose(Q1) * A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) * Q1;
         end
             
         % Compute the block-diagonal's bottom-right neighbor blocks
@@ -95,22 +90,16 @@ for u = 1:(n-2)
             % Copy over new Q1
             Q1 = Q2;
         elseif(beta == b-1)
-%             if(b ~= 1)
-                bd_idx_c = bd_idx_a + d %r;
-                bd_idx_d = bd_idx_b + r
-%             else
-%                 bd_idx_c = bd_idx_a + d - 1 %r;
-%                 bd_idx_d = bd_idx_b + r - 1
-%             end
+            bd_idx_c = bd_idx_a + d;
+            bd_idx_d = bd_idx_b + r;
             
             % Compute Q2 for upper-/lower-triangularization of neighbors
             A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) = A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) * Q1;
-%             return;
             
             % Alter unit vector dimension to r
             unit = zeros(r, 1);
             unit(1) = 1;
-            
+
             w = A(bd_idx_c:bd_idx_d, bd_idx_a) + sign(A(bd_idx_c, bd_idx_a))*norm(A(bd_idx_c:bd_idx_d, bd_idx_a)).*unit;
             v = w./norm(w);
             Q2 = eye(r) - 2*v(1:r)*transpose(v(1:r))
@@ -118,17 +107,15 @@ for u = 1:(n-2)
             % Compute new bottom/right neighbors of block-diagonal of A
             A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) = transpose(Q2) * A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b);
             A(bd_idx_a:bd_idx_b, bd_idx_c:bd_idx_d) = transpose(A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b));
-                
+
             Q1 = Q2;
 
             % Reset altered unit vector dimension to d
             unit = zeros(d, 1);
             unit(1) = 1;
-            
-            disp 'beta == b-1';
         end
     end
-    A
+%     A
 end
 
 A
