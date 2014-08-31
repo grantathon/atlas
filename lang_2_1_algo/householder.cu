@@ -2,6 +2,8 @@
 #include "cublas_v2.h"
 #include "aux.h"
 #include "toeplitz.h"
+
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -22,13 +24,13 @@ __global__ void ComputeHouseVec(float *v, float *a_col, float alpha, float r, in
 
         if(col_val != 0)  // Only work on non-zero elements
         {
-            if(threadIdx.x == 1)
+            if(threadIdx.x != 1)
             {
-                v[threadIdx.x] = (col_val - alpha) / (2*r);
+                v[threadIdx.x] = col_val / (2*r);
             }
             else
             {
-                v[threadIdx.x] = col_val / (2*r);
+                v[threadIdx.x] = (col_val - alpha) / (2*r);
             }
         }
     }
@@ -40,36 +42,24 @@ __global__ void ComputeQ(float *q, float *v, int dim)
     int x = threadIdx.x + blockIdx.x*blockDim.x;
     int y = threadIdx.y + blockIdx.y*blockDim.y;
     
-    if(x < dim && y < dim)
+    if(x > 0 && x < dim && y > 0 && y < dim)
     {
         float x_val = v[x];
         float y_val = v[y];
 
-        // if(x < dim && y < dim)
-        // {
-        //     if(x == y)  // Compute diagonal value
-        //     {
-        //         q[IDX2C(y, x, dim)] = 1.0f - 2.0f*powf(fabs(v[x]), 2.0);
-        //     }
-        //     else  // Compute symmetric values
-        //     {
-        //         q[IDX2C(y, x, dim)] = -2.0f*v[x]*v[y];
-        //     }
-        // }
-
         if(x == y)  // Compute diagonal value
         {
-            q[IDX2C(y, x, dim)] = 1.0f - 2.0f*powf(fabs(x_val), 2.0);
+            q[IDX2C(y - 1, x - 1, dim - 1)] = 1.0f - 2.0f*powf(fabs(x_val), 2.0);
         }
-        else  if(y_val != 0)  // Compute symmetric values
+        else  // Compute symmetric values
         {
-            q[IDX2C(y, x, dim)] = -2.0f*x_val*y_val;
+            q[IDX2C(y - 1, x - 1, dim - 1)] = -2.0f*x_val*y_val;
         }
     }
 }
 
 /* Update the block pair using the Q matrix */
-int UpdateBlockPair(float *block_pair, float *v, float *q, int dim, int shift)
+int UpdateBlockPair(float *block_pair, float *q, int dim, int shift)
 {
     cublasStatus_t stat;
     cublasHandle_t handle;
@@ -96,73 +86,19 @@ int UpdateBlockPair(float *block_pair, float *v, float *q, int dim, int shift)
 
     // Create cuBLAS handle
     stat = cublasCreate(&handle);
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf ("CUBLAS initialization failed\n");
-        cudaFree(cublasQ);
-        cudaFree(cublasBlockPair);
-        cudaFree(cublasTempMatrix);
-        free(shiftedBlockPair);
-        return -1;
-    }
     
     // Initialize Q matrix
     stat = cublasSetMatrix(dim, dim, sizeof(*q), q, dim, cublasQ, dim);
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf ("data download failed");
-        cudaFree(cublasQ);
-        cudaFree(cublasBlockPair);
-        cudaFree(cublasTempMatrix);
-        cublasDestroy(handle);
-        free(shiftedBlockPair);
-        return -2;
-    }
     
     // Initialize block pair matrix
     stat = cublasSetMatrix(dim, dim, sizeof(*shiftedBlockPair), shiftedBlockPair, dim, cublasBlockPair, dim);
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf ("data download failed");
-        cudaFree(cublasQ);
-        cudaFree(cublasBlockPair);
-        cudaFree(cublasTempMatrix);
-        cublasDestroy(handle);
-        free(shiftedBlockPair);
-        return -3;
-    }
 
     // Perform block pair computations
     stat = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, dim, dim, dim, &alpha, cublasQ, dim, cublasBlockPair, dim, &beta, cublasTempMatrix, dim);
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf ("data download failed");
-        cudaFree(cublasQ);
-        cudaFree(cublasBlockPair);
-        cudaFree(cublasTempMatrix);
-        cublasDestroy(handle);
-        free(shiftedBlockPair);
-        return -6;
-    }
-
     stat = cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N, dim, dim, dim, &alpha, cublasTempMatrix, dim, cublasQ, dim, &beta, cublasBlockPair, dim);
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf ("data download failed");
-        cudaFree(cublasQ);
-        cudaFree(cublasBlockPair);
-        cudaFree(cublasTempMatrix);
-        cublasDestroy(handle);
-        free(shiftedBlockPair);
-        return -7;
-    }
 
     // Retreive block pair matrix
     stat = cublasGetMatrix(dim, dim, sizeof(*shiftedBlockPair), cublasBlockPair, dim, shiftedBlockPair, dim);
-    if (stat != CUBLAS_STATUS_SUCCESS) {
-        printf ("data upload failed");
-        cudaFree(cublasQ);
-        cudaFree(cublasBlockPair);
-        cudaFree(cublasTempMatrix);
-        cublasDestroy(handle);
-        free(shiftedBlockPair);
-        return -5;
-    }
 
     // Free GPU memory
     cudaFree(cublasQ);
@@ -183,24 +119,39 @@ int UpdateBlockPair(float *block_pair, float *v, float *q, int dim, int shift)
     return 0;
 }
 
-// Reduce the matrix to a tridiagonal matrix via Householder transformations
-int BlockPairReduction(float *q, float *column, float *block_pair, int dim, int shift)
+// Reduce the matrix to a tridiagonal matrix via Bruno Lang's 2.1 SBTH algorithm
+int BlockPairReduction(float *block_pair, int block_dim, int sub_block_dim, int nu)
 {
-    /* HOUSEHOLDER TRANSFORMATION */
     cudaDeviceSynchronize();
 
+    int compBlocks = 0;
+    int remBlocks = 0;
     float alpha = 0.0;
     float r = 0.0;
-    float *v = (float *)malloc((dim - shift)*sizeof(*v));
+    float *v = (float *)malloc((sub_block_dim + 1)*sizeof(*v));
+    float *column = (float *)malloc((block_dim - nu)*sizeof(*column));
+    float *q = (float *)malloc(sub_block_dim*sub_block_dim*sizeof(*q));
 
-    // Retreive first column of block pair
-    for(int i = 0; i < (dim - shift); i++)
+    // Determine the blocks to compute and the remaining blocks s.t.
+    // block_dim - nu = sub_block_dim*(compBlocks - 1) + remBlocks
+    // 1 <= remBlocks <= sub_block_dim
+    compBlocks = floor((block_dim - nu) / (float)sub_block_dim);
+    remBlocks = block_dim - nu - sub_block_dim*(compBlocks - 1);
+    if(remBlocks > sub_block_dim)
     {
-        column[i] = block_pair[i*dim + shift*(dim + 1)];
+        compBlocks += floor(remBlocks / sub_block_dim);
+        remBlocks -= sub_block_dim*floor(remBlocks / sub_block_dim);
+    }
+
+    // Retreive first full diagonal-element column of block pair
+    for(int i = 0; i < (block_dim - nu); i++)
+    {
+        column[i] = block_pair[(i*block_dim + nu*(block_dim + 1))];
+        cout << column[i] << endl;
     }
 
     // Compute alpha
-    for(int i = 1; i < (dim - shift); i++)
+    for(int i = 1; i < (block_dim - nu); i++)
     {
         alpha += powf(fabs(column[i]), 2);
     }
@@ -216,46 +167,62 @@ int BlockPairReduction(float *q, float *column, float *block_pair, int dim, int 
     // Compute r
     r = sqrtf((powf(alpha, 2) - column[1]*alpha) / 2);
 
+    // cout << "r = " << r << ", alpha = " << alpha << endl;
+
     // Allocate memory on the GPU and copy data
     float *gpuV, *gpuColumn, *gpuQ;
-    cudaMalloc(&gpuV, (size_t)(dim - shift)*sizeof(*gpuV)); CUDA_CHECK;
-    cudaMalloc(&gpuColumn, (size_t)(dim - shift)*sizeof(*gpuColumn)); CUDA_CHECK;
-    cudaMalloc(&gpuQ, (size_t)(dim - shift)*(dim - shift)*sizeof(*gpuQ)); CUDA_CHECK;
-    cudaMemset(gpuV, 0, (size_t)(dim - shift)*sizeof(*gpuV)); CUDA_CHECK;
-    cudaMemcpy(gpuColumn, column, (size_t)(dim - shift)*sizeof(*gpuColumn), cudaMemcpyHostToDevice); CUDA_CHECK;
-    cudaMemset(gpuQ, 0, (size_t)(dim - shift)*(dim - shift)*sizeof(*gpuQ)); CUDA_CHECK;
+    cudaMalloc(&gpuV, (size_t)(sub_block_dim + 1)*sizeof(*gpuV)); CUDA_CHECK;
+    cudaMalloc(&gpuColumn, (size_t)(block_dim - nu)*sizeof(*gpuColumn)); CUDA_CHECK;
+    cudaMalloc(&gpuQ, (size_t)sub_block_dim*sub_block_dim*sizeof(*gpuQ)); CUDA_CHECK;
 
-    // TODO: Put all GPU operations into one kernel
+    cudaMemset(gpuV, 0, (size_t)(sub_block_dim + 1)*sizeof(*gpuV)); CUDA_CHECK;
+    cudaMemcpy(gpuColumn, column, (size_t)(block_dim - nu)*sizeof(*gpuColumn), cudaMemcpyHostToDevice); CUDA_CHECK;
+    cudaMemset(gpuQ, 0, (size_t)sub_block_dim*sub_block_dim*sizeof(*gpuQ)); CUDA_CHECK;
+
+    // TODO: Put all GPU operations into one kernel (need CC 3.5)
 
     // Init block and grid sizes
     dim3 block = dim3(512, 1, 1);
-    dim3 grid = dim3(((dim - shift) + block.x-1)/block.x, 1, 1);
+    dim3 grid = dim3(((sub_block_dim + 1) + block.x-1)/block.x, 1, 1);
 
-    ComputeHouseVec<<<grid, block>>>(gpuV, gpuColumn, alpha, r, (dim - shift));
+    ComputeHouseVec<<<grid, block>>>(gpuV, gpuColumn, alpha, r, sub_block_dim + 1);
+
+    // cudaMemcpy(v, gpuV, (size_t)(sub_block_dim + 1)*sizeof(*gpuV), cudaMemcpyDeviceToHost); CUDA_CHECK;
+    // PrintVector(v, sub_block_dim + 1);
+
+    // Set block and grid for next computation
     block = dim3(32, 32, 1);
-    grid = dim3(((dim - shift) + block.x-1)/block.x, ((dim - shift) + block.y-1)/block.y, 1);
+    grid = dim3(((sub_block_dim + 1) + block.x-1)/block.x, ((sub_block_dim + 1) + block.y-1)/block.y, 1);
 
     // Perform Q computation
     cudaDeviceSynchronize();
-    ComputeQ<<<grid, block>>>(gpuQ, gpuV, (dim - shift));
-    cudaMemcpy(q, gpuQ, (size_t)(dim - shift)*(dim - shift)*sizeof(*gpuQ), cudaMemcpyDeviceToHost); CUDA_CHECK;
+    ComputeQ<<<grid, block>>>(gpuQ, gpuV, (sub_block_dim + 1));
+
+    cudaMemcpy(q, gpuQ, (size_t)sub_block_dim*sub_block_dim*sizeof(*gpuQ), cudaMemcpyDeviceToHost); CUDA_CHECK;
+    // PrintMatrix(q, sub_block_dim, sub_block_dim);
 
     // Update elements of input matrix
-    UpdateBlockPair(block_pair, gpuV, q, (dim - shift), shift);
+    UpdateBlockPair(block_pair, q, sub_block_dim + 1, nu);
+    // UpdateBlockPair(block_pair, gpuV, q, (block_dim - nu), nu);
+
+    PrintMatrix(block_pair, block_dim, block_dim);
+    return 0;
 
     // Copy data back to CPU and free GPU memory
-    cudaMemcpy(column, gpuColumn, (size_t)(dim - shift)*sizeof(*gpuColumn), cudaMemcpyDeviceToHost); CUDA_CHECK;
+    cudaMemcpy(column, gpuColumn, (size_t)(block_dim - nu)*sizeof(*gpuColumn), cudaMemcpyDeviceToHost); CUDA_CHECK;
     cudaFree(gpuV); CUDA_CHECK;
     cudaFree(gpuColumn); CUDA_CHECK;
     cudaFree(gpuQ); CUDA_CHECK;
 
     // Retreive first column of block pair
-    for(int i = 0; i < (dim - shift); i++)
+    for(int i = 0; i < (block_dim - nu); i++)
     {
-        column[i] = block_pair[i*dim + shift*(dim + 1)];
+        column[i] = block_pair[i*block_dim + nu*(block_dim + 1)];
     }
 
     free(v);
+    free(column);
+    free(q);
 
     return 0;
 }

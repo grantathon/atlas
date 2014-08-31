@@ -4,7 +4,7 @@ INCLUDES =
 LDFLAGS = -L/opt/cuda/lib64
 LIBS = -lcublas
 
-OBJECTS = main.o aux.o toeplitz.o householder.o
+OBJECTS = main.o aux.o toeplitz.o householder.o Matrix.o Toeplitz.o
 PROG = atlas
 
 all:$(PROG)
@@ -16,4 +16,4 @@ $(PROG): $(OBJECTS)
 	nvcc $(CFLAGS) $(INCLUDES) -c $<
 
 clean:
-	rm -rf *.o $(PROG)
+	-rm -rf *.o $(PROG)
