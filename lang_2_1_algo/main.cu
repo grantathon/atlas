@@ -18,6 +18,8 @@
 #include "toeplitz.h"
 #include "householder.cuh"
 #include "Matrix.h"
+#include "MatrixNumerics.h"
+#include "Toeplitz.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -29,26 +31,30 @@ int main(int argc, char **argv)
 {
     /* TEST MATRIX CLASS */
     // Basic instantiation
-    Matrix<float> *testMatrix = new Matrix<float>(10, 10, -1.0);
-    testMatrix->Print();
+    // Matrix<float> *testMatrix = new Matrix<float>(10, 10, -1.0);
+    // testMatrix->Print();
 
-    // Update elements of matrix
-    testMatrix->SetElement(0, 0, 8.0);
-    testMatrix->SetElement(1, 1, 9.0);
-    testMatrix->SetElement(1, 0, 10.0);
-    testMatrix->Print();
+    // // Update elements of matrix
+    // testMatrix->SetElement(0, 0, 8.0);
+    // testMatrix->SetElement(1, 1, 9.0);
+    // testMatrix->SetElement(1, 0, 10.0);
+    // testMatrix->Print();
 
-    // Retrieve block of matrix
-    Matrix<float> *testBlock = testMatrix->GetBlock(8, 8, 2, 2);
-    testBlock->Print();
+    // // Create Toeplitz matrix
+    // Toeplitz<float> *testToeplitz = new Toeplitz<float>(7, 2);
+    // testToeplitz->Print();
 
-    // Set block of matrix
-    
+    // // // Retrieve block of matrix
+    // Matrix<float> *testBlock = testToeplitz->GetBlock(0, 0, 2, 2);
+    // testBlock->Print();
 
-    delete testMatrix;
-    delete testBlock;
+    // // Write to block of Toeplitz
+    // testToeplitz->SetBlock(*testBlock, 5, 0);
+    // testToeplitz->Print();
 
-    return 0;
+    // delete testMatrix;
+    // delete testBlock;
+    // delete testToeplitz;
 
     cudaDeviceSynchronize(); CUDA_CHECK;
     
@@ -61,29 +67,34 @@ int main(int argc, char **argv)
     // Initialize computation parameters
     const int dim = atoi(argv[1]);
     const int diagCnt = atoi(argv[2]);
-    float *cpuToeplitz = (float *)malloc(dim*dim*sizeof(*cpuToeplitz));
+    // float *cpuToeplitz = (float *)malloc(dim*dim*sizeof(*cpuToeplitz));
 
-    int errorCheck = BuildSymmetricToeplitz(cpuToeplitz, dim, diagCnt);
-    if(errorCheck != 0)
-    {
-        cout << "Issue when executing BuildSymmetricToeplitz()" << endl;
-        return -2;
-    }
+    // int errorCheck = BuildSymmetricToeplitz(cpuToeplitz, dim, diagCnt);
+    // if(errorCheck != 0)
+    // {
+    //     cout << "Issue when executing BuildSymmetricToeplitz()" << endl;
+    //     return -2;
+    // }
 
     cout << endl << "Toeplitz before:" << endl;
-    PrintMatrix(cpuToeplitz, dim, dim);
+    // PrintMatrix(cpuToeplitz, dim, dim);
+
+    Toeplitz<float> *toeplitz = new Toeplitz<float>(dim, diagCnt);
+    toeplitz->Print();
 
     // Start timer
     Timer timer;
     float t = timer.get();
     timer.start();
 
-    errorCheck = BlockPairReduction(cpuToeplitz, dim, diagCnt, 0);
-    if(errorCheck != 0)
-    {
-        cout << "Issue when executing BlockPairReduction()" << endl;
-        return -3;
-    }
+    Matrix<float> *triDiagMatrix = MatrixNumerics<float>::LangTridiagonalization21(*toeplitz);
+
+    // errorCheck = BlockPairReduction(cpuToeplitz, dim, diagCnt, 0);
+    // if(errorCheck != 0)
+    // {
+    //     cout << "Issue when executing BlockPairReduction()" << endl;
+    //     return -3;
+    // }
 
     // Compute tridiagonal matrix via GPU
     // for(int nu = 0; nu < (dim - 2); nu++)
@@ -114,7 +125,8 @@ int main(int argc, char **argv)
     // }
 
     cout << endl << "Toeplitz after:" << endl;
-    PrintMatrix(cpuToeplitz, dim, dim);
+    // PrintMatrix(cpuToeplitz, dim, dim);
+    triDiagMatrix->Print();
 
     // End timer
     timer.end();  t = timer.get();  // elapsed time in seconds
@@ -123,7 +135,9 @@ int main(int argc, char **argv)
     cout << endl << "time GPU: " << t*1000<<" ms" << endl;
 
     // Free heap memory
-    free(cpuToeplitz);
+    // free(cpuToeplitz);
+    delete triDiagMatrix;
+    delete toeplitz;
 
     return 0;
 }

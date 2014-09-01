@@ -4,7 +4,7 @@ INCLUDES =
 LDFLAGS = -L/opt/cuda/lib64
 LIBS = -lcublas
 
-OBJECTS = main.o aux.o toeplitz.o householder.o Matrix.o Toeplitz.o
+OBJECTS = main.o aux.o toeplitz.o householder.o Matrix.o Toeplitz.o MatrixNumerics.o
 PROG = atlas
 
 all:$(PROG)

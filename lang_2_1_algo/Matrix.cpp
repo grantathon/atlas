@@ -3,6 +3,7 @@
 template <class T>
 Matrix<T>::Matrix()
 {
+    // PURPOSELY EMPTY
 }
 
 template <class T>
@@ -12,11 +13,7 @@ Matrix<T>::Matrix(int m, int n)
     xDim = n;
 
     // Allocate space for matrix
-    matrixData = new T*[yDim];
-    for(int i = 0; i < yDim; i++)
-    {
-        matrixData[i] = new T[xDim];
-    }
+    matrixData = new T[xDim*yDim];
 }
 
 template <class T>
@@ -26,65 +23,72 @@ Matrix<T>::Matrix(int m, int n, T initValue)
     xDim = n;
 
     // Allocate space for matrix
-    matrixData = new T*[yDim];
-    for(int i = 0; i < yDim; i++)
-    {
-        matrixData[i] = new T[xDim];
-    }
+    matrixData = new T[xDim*yDim];
 
     // Initialize matrix elements
     for(int y = 0; y < yDim; y++)
     {
         for(int x = 0; x < xDim; x++)
         {
-            matrixData[y][x] = initValue;
-        }  
+            size_t idx = (size_t)x + (size_t)y*xDim;
+            matrixData[idx] = initValue;
+        }
     }
 }
 
-// template <class T>
-// Matrix<T>::Matrix(int m, int n, T** data)
-// {
-//     yDim = m;
-//     xDim = n;
+template <class T>
+Matrix<T>::Matrix(int m, int n, T* data)
+{
+    yDim = m;
+    xDim = n;
 
-//     // Allocate space for matrix
-//     matrixData = new T*[yDim];
-//     for(int i = 0; i < yDim; i++)
-//     {
-//         matrixData[i] = new T[xDim];
-//     }
+    // Allocate space for matrix
+    matrixData = new T[xDim*yDim];
 
-//     // Set matrix elements
-//     for(int y = 0; y < yDim; y++)
-//     {
-//         for(int x = 0; x < xDim; x++)
-//         {
-//             matrixData[y][x] = data[y][x];
-//         }
-//     }
-// }
+    // Initialize matrix elements
+    for(int y = 0; y < yDim; y++)
+    {
+        for(int x = 0; x < xDim; x++)
+        {
+            size_t idx = (size_t)x + (size_t)y*xDim;
+            matrixData[idx] = data[idx];
+        }
+    }
+}
 
 template <class T>
 Matrix<T>::~Matrix()
 {
-    // Deallocate space for matrix
-    for(int i = 0; i < yDim; i++)
-    {
-        delete matrixData[i];
-    }
-
     delete[] matrixData;
+}
+
+template <class T>
+int Matrix<T>::GetDimX() const
+{
+    return xDim;
+}
+
+template <class T>
+int Matrix<T>::GetDimY() const
+{
+    return yDim;
+}
+
+template <class T>
+T* Matrix<T>::GetMatrixData() const
+{
+    return matrixData;
 }
 
 template <class T>
 T Matrix<T>::GetElement(int x, int y) const
 {
     T element;
+    size_t idx = (size_t)x + (size_t)y*xDim;
 
     try
     {
-        element = this->matrixData[y][x];
+        element = this->matrixData[idx];
     }
     catch(exception& ex)
     {
@@ -97,9 +101,11 @@ T Matrix<T>::GetElement(int x, int y) const
 template <class T>
 void Matrix<T>::SetElement(int x, int y, T value)
 {
+    size_t idx = (size_t)x + (size_t)y*xDim;
+
     try
     {
-        this->matrixData[y][x] = value;
+        this->matrixData[idx] = value;
     }
     catch(exception& ex)
     {
@@ -120,7 +126,8 @@ Matrix<T>* Matrix<T>::GetBlock(int x, int y, int xBlockDim, int yBlockDim) const
         {
             for(int j = 0; j < xBlockDim; j++)
             {
-                block->SetElement(j, i, this->matrixData[i + y][j + x]);
+                size_t idx = (size_t)(x + j) + (size_t)(y + i)*xDim;
+                block->SetElement(j, i, this->matrixData[idx]);
             }  
         }
     }
@@ -133,17 +140,17 @@ Matrix<T>* Matrix<T>::GetBlock(int x, int y, int xBlockDim, int yBlockDim) const
 }
 
 template <class T>
-void Matrix<T>::SetBlock(const T** data, int x, int y, int xBlockDim, int yBlockDim)
+void Matrix<T>::SetBlock(const Matrix<T>& inputBlock, int xDest, int yDest)
 {
     // Check dimension validity
-    if((x + xBlockDim) <= this->xDim && (y + yBlockDim) <= this->yDim)
+    if((xDest + inputBlock.xDim) <= this->xDim && (yDest + inputBlock.yDim) <= this->yDim)
     {
         // Copy values from object matrix to block output
-        for(int i = 0; i < yBlockDim; i++)
+        for(int y = 0; y < inputBlock.yDim; y++)
         {
-            for(int j = 0; j < xBlockDim; j++)
+            for(int x = 0; x < inputBlock.xDim; x++)
             {
-                this->SetElement(j + x, i + y, data[i][j]);
+                SetElement(x + xDest, y + yDest, inputBlock.GetElement(x, y));
             }  
         }
     }
@@ -158,18 +165,14 @@ void Matrix<T>::Print() const
 {
     for(int y = 0; y < yDim; y++)
     {
-        // printf("|");
         cout << "|";
 
         for(int x = 0; x < xDim; x++)
         {
-            // const size_t idx = j + m*i;
-            // printf(" %1.2f", matrix[idx]);
-            // cout << " " << setiosflags(ios::fixed) << setprecision(3) << matrix[idx];
-            cout << " " << matrixData[y][x];
+            size_t idx = (size_t)x + (size_t)y*xDim;
+            cout << " " << setw(6) << setprecision(3) << matrixData[idx];
         }
 
-        // printf(" |\n");
         cout << " |" << endl;
     }
 
