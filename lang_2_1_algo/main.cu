@@ -17,9 +17,9 @@
 #include "aux.h"
 #include "toeplitz.h"
 #include "householder.cuh"
-#include "Matrix.h"
 #include "MatrixNumerics.h"
 #include "Toeplitz.h"
+#include "Matrix.h"
 
 #include <iostream>
 #include <stdio.h>
@@ -32,13 +32,19 @@ int main(int argc, char **argv)
     /* TEST MATRIX CLASS */
     // Basic instantiation
     // Matrix<float> *testMatrix = new Matrix<float>(10, 10, -1.0);
-    // testMatrix->Print();
+    // // testMatrix->Print();
 
     // // Update elements of matrix
     // testMatrix->SetElement(0, 0, 8.0);
     // testMatrix->SetElement(1, 1, 9.0);
     // testMatrix->SetElement(1, 0, 10.0);
     // testMatrix->Print();
+
+    // Matrix<float> *testMatrix1 = new Matrix<float>(10, 1, -1.0);
+    // testMatrix1->Print();
+
+    // Matrix<float> *testVector = testMatrix->GetBlock(0, 0, 1, 10);
+    // testVector->Print();
 
     // // Create Toeplitz matrix
     // Toeplitz<float> *testToeplitz = new Toeplitz<float>(7, 2);

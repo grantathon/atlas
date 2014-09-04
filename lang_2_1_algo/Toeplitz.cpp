@@ -10,6 +10,8 @@ template <class T>
 Toeplitz<T>::Toeplitz(int dim, int bandwidth)
     : Matrix<T>::Matrix(dim, dim)
 {
+    this->bandwidth = bandwidth;
+
     size_t idx = 0;
     int absXY = 0;
 
@@ -50,12 +52,31 @@ Toeplitz<T>::Toeplitz(int dim, int bandwidth)
 }
 
 template <class T>
+Toeplitz<T>::Toeplitz(int dim, int bandwidth, T* data)
+    : Matrix<T>::Matrix(dim, dim, data)
+{
+    this->bandwidth = bandwidth;
+}
+
+template <class T>
 Toeplitz<T>::~Toeplitz()
 {
 
 }
 
+template <class T>
+int Toeplitz<T>::GetBandwidth() const
+{
+    return bandwidth;
+}
+
+template <class T>
+void Toeplitz<T>::SetBandwidth(int bw)
+{
+    bandwidth = bw;
+}
+
 // Explicit template instantiations for supported types
-template class Toeplitz<int>;
+// template class Toeplitz<int>;
 template class Toeplitz<float>;
 template class Toeplitz<double>;

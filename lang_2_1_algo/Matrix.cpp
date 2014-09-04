@@ -7,20 +7,20 @@ Matrix<T>::Matrix()
 }
 
 template <class T>
-Matrix<T>::Matrix(int m, int n)
+Matrix<T>::Matrix(int xDim, int yDim)
 {
-    yDim = m;
-    xDim = n;
+    this->xDim = xDim;
+    this->yDim = yDim;
 
     // Allocate space for matrix
     matrixData = new T[xDim*yDim];
 }
 
 template <class T>
-Matrix<T>::Matrix(int m, int n, T initValue)
+Matrix<T>::Matrix(int xDim, int yDim, T initValue)
 {
-    yDim = m;
-    xDim = n;
+    this->xDim = xDim;
+    this->yDim = yDim;
 
     // Allocate space for matrix
     matrixData = new T[xDim*yDim];
@@ -37,10 +37,10 @@ Matrix<T>::Matrix(int m, int n, T initValue)
 }
 
 template <class T>
-Matrix<T>::Matrix(int m, int n, T* data)
+Matrix<T>::Matrix(int xDim, int yDim, T* data)
 {
-    yDim = m;
-    xDim = n;
+    this->xDim = xDim;
+    this->yDim = yDim;
 
     // Allocate space for matrix
     matrixData = new T[xDim*yDim];
@@ -116,7 +116,7 @@ void Matrix<T>::SetElement(int x, int y, T value)
 template <class T>
 Matrix<T>* Matrix<T>::GetBlock(int x, int y, int xBlockDim, int yBlockDim) const
 {
-    Matrix<T> *block = new Matrix<T>(yBlockDim, xBlockDim);
+    Matrix<T> *block = new Matrix<T>(xBlockDim, yBlockDim);
 
     // Check dimension validity
     if((x + xBlockDim) <= this->xDim && (y + yBlockDim) <= this->yDim)
@@ -180,6 +180,6 @@ void Matrix<T>::Print() const
 }
 
 // Explicit template instantiations for supported types
-template class Matrix<int>;
+// template class Matrix<int>;
 template class Matrix<float>;
 template class Matrix<double>;

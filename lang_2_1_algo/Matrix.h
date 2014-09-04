@@ -14,14 +14,13 @@ protected:
     int xDim;  // column count
     int yDim;  // row count
     T* matrixData;
-    // T** matrixData;
 
 public:
     // Constructors/destructor
     Matrix();
-    Matrix(int m, int n);
-    Matrix(int m, int n, T initValue);
-    Matrix(int m, int n, T* data);
+    Matrix(int xDim, int yDim);
+    Matrix(int xDim, int yDim, T initValue);
+    Matrix(int xDim, int yDim, T* data);
     virtual ~Matrix();
 
     // Getters/setters
