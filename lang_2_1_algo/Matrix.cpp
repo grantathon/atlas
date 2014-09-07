@@ -161,6 +161,34 @@ void Matrix<T>::SetBlock(const Matrix<T>& inputBlock, int xDest, int yDest)
 }
 
 template <class T>
+T* Matrix<T>::GetBlockData(int x, int y, int xBlockDim, int yBlockDim) const
+{
+    T *blockData = new T[xBlockDim*yBlockDim];
+
+    // Check dimension validity
+    if((x + xBlockDim) <= this->xDim && (y + yBlockDim) <= this->yDim)
+    {
+        // Copy values from object matrix to block output
+        for(int i = 0; i < yBlockDim; i++)
+        {
+            for(int j = 0; j < xBlockDim; j++)
+            {
+                size_t sinkIdx = (size_t)j + (size_t)i*xBlockDim;
+                size_t sourceIdx = (size_t)(x + j) + (size_t)(y + i)*xDim;
+
+                blockData[sinkIdx] = this->matrixData[sourceIdx];
+            }  
+        }
+    }
+    else
+    {
+        cout << "Invalid dimensions passed to GetBlockData()" << endl;
+    }
+
+    return blockData;
+}
+
+template <class T>
 void Matrix<T>::Print() const
 {
     for(int y = 0; y < yDim; y++)

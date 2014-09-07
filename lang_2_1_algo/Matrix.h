@@ -33,6 +33,9 @@ public:
     Matrix<T>* GetBlock(int x, int y, int xBlockDim, int yBlockDim) const;
     void SetBlock(const Matrix<T>& inputBlock, int xDest, int yDest);
 
+    T* GetBlockData(int x, int y, int xBlockDim, int yBlockDim) const;
+    // void SetBlockData(const T* data, int xDest, int yDest);
+
     T GetElement(int x, int y) const;
     void SetElement(int x, int y, T value);
 
