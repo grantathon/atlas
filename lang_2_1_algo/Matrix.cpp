@@ -75,6 +75,29 @@ int Matrix<T>::GetDimY() const
 }
 
 template <class T>
+void Matrix<T>::ResetDimXY(int xDim, int yDim)
+{
+    this->xDim = xDim;
+    this->yDim = yDim;
+
+    // Clear data
+    delete[] matrixData;
+
+    // Allocate space for matrix
+    matrixData = new T[xDim*yDim];
+
+    // Initialize matrix elements
+    for(int y = 0; y < yDim; y++)
+    {
+        for(int x = 0; x < xDim; x++)
+        {
+            size_t idx = (size_t)x + (size_t)y*xDim;
+            matrixData[idx] = 0.0;
+        }
+    }
+}
+
+template <class T>
 T* Matrix<T>::GetMatrixData() const
 {
     return matrixData;

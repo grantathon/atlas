@@ -26,6 +26,7 @@ public:
     // Getters/setters
     int GetDimX() const;
     int GetDimY() const;
+    void ResetDimXY(int xDim, int yDim);
 
     T* GetMatrixData() const;  // Gets the whole matrix
     // void SetMatrix(const T** data);  // Sets the whole matrix
