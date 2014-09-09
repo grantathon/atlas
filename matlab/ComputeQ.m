@@ -2,7 +2,7 @@ function Q = ComputeQ(A, d)
     % Compute Householder parameters
     alpha = -sign(A(1))*norm(A(1:length(A)));
     rad = sqrt((alpha^2 - A(1)*alpha) / 2);
-
+    
     % Compute Householder vector
     v = zeros(d+1, 1);
     v(2) = (A(1) - alpha) / (2*rad);

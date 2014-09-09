@@ -2,8 +2,8 @@ clear all;
 tic;
 
 % Inputs
-n = 7;  % A_nxn (i.e., square A with dim n)
-d = 2;  % semi-diagonal size (e.g., 1 = trididagonal A)
+n = 10;  % A_nxn (i.e., square A with dim n)
+d = 3;  % semi-diagonal size (e.g., 1 = trididagonal A)
 
 % Initialize unit vector
 unit = zeros(d, 1);
@@ -13,13 +13,13 @@ unit(1) = 1;
 % MATRICES. DON'T FORGET THE COMMENT OUT THE A MATRICES BELOW!
 %
 % Build symmetric Toeplitz
-% temp = rand(1, (diagRadius+1));
-% for i=(diagRadius + 2):dim
+% temp = rand(1, (d+1));
+% for i=(d+2):n
 %     temp = [temp 0];
 % end
-% A = toeplitz(temp);
+% A = toeplitz(temp)
 % 
-% clear temp diagRadius;
+% clear temp;
 
 % A = [ 4 1 -2 2;
 %       1 2 0 1;
@@ -31,14 +31,40 @@ unit(1) = 1;
 %         0.84 0.39 0.78 0.39 0.84;
 %         0.00 0.84 0.39 0.78 0.39;
 %         0.00 0.00 0.84 0.39 0.78; ]
+% 
+% A = [   0.84 0.39 0.78 0.00 0.00 0.00 0.00;
+%         0.39 0.84 0.39 0.78 0.00 0.00 0.00;
+%         0.78 0.39 0.84 0.39 0.78 0.00 0.00;
+%         0.00 0.78 0.39 0.84 0.39 0.78 0.00;
+%         0.00 0.00 0.78 0.39 0.84 0.39 0.78;
+%         0.00 0.00 0.00 0.78 0.39 0.84 0.39;
+%         0.00 0.00 0.00 0.00 0.78 0.39 0.84; ]
+% 
+% A = [
+%     0.9649    0.1576    0.9706         0         0         0         0         0         0         0;
+%     0.1576    0.9649    0.1576    0.9706         0         0         0         0         0         0;
+%     0.9706    0.1576    0.9649    0.1576    0.9706         0         0         0         0         0;
+%          0    0.9706    0.1576    0.9649    0.1576    0.9706         0         0         0         0;
+%          0         0    0.9706    0.1576    0.9649    0.1576    0.9706         0         0         0;
+%          0         0         0    0.9706    0.1576    0.9649    0.1576    0.9706         0         0;
+%          0         0         0         0    0.9706    0.1576    0.9649    0.1576    0.9706         0;
+%          0         0         0         0         0    0.9706    0.1576    0.9649    0.1576    0.9706;
+%          0         0         0         0         0         0    0.9706    0.1576    0.9649    0.1576;
+%          0         0         0         0         0         0         0    0.9706    0.1576    0.9649;
+% ]
 
-A = [   0.78 0.39 0.84 0.00 0.00 0.00 0.00;
-        0.39 0.78 0.39 0.84 0.00 0.00 0.00;
-        0.84 0.39 0.78 0.39 0.84 0.00 0.00;
-        0.00 0.84 0.39 0.78 0.39 0.84 0.00;
-        0.00 0.00 0.84 0.39 0.78 0.39 0.84;
-        0.00 0.00 0.00 0.84 0.39 0.78 0.39;
-        0.00 0.00 0.00 0.00 0.84 0.39 0.78; ]
+A = [
+    0.9572    0.4854    0.8003    0.1419         0         0         0         0         0         0;
+    0.4854    0.9572    0.4854    0.8003    0.1419         0         0         0         0         0;
+    0.8003    0.4854    0.9572    0.4854    0.8003    0.1419         0         0         0         0;
+    0.1419    0.8003    0.4854    0.9572    0.4854    0.8003    0.1419         0         0         0;
+         0    0.1419    0.8003    0.4854    0.9572    0.4854    0.8003    0.1419         0         0;
+         0         0    0.1419    0.8003    0.4854    0.9572    0.4854    0.8003    0.1419         0;
+         0         0         0    0.1419    0.8003    0.4854    0.9572    0.4854    0.8003    0.1419;
+         0         0         0         0    0.1419    0.8003    0.4854    0.9572    0.4854    0.8003;
+         0         0         0         0         0    0.1419    0.8003    0.4854    0.9572    0.4854;
+         0         0         0         0         0         0    0.1419    0.8003    0.4854    0.9572;  
+]
 
 % Main loop
 for u = 1:(n-2)
@@ -50,6 +76,10 @@ for u = 1:(n-2)
         r = r - d*floor(r / d);
     end
 
+    if(b == 1)
+        d = r;
+    end
+    
     Q1 = ComputeQ(A((u+1):n, u), d);
     
     % Compute new column/row of A
@@ -60,13 +90,14 @@ for u = 1:(n-2)
     for beta = 1:b
         % Compute the block-diagonal
         if(beta ~= b)
-            bd_idx_a = u + 2*beta - 1;
-            bd_idx_b = u + beta*d;
+            bd_idx_a = 2 + u - 1 + d*(beta - 1);
+            bd_idx_b = 2 + u - 1 + d*(beta - 1) + d - 1;
+            
             A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) = transpose(Q1) * A(bd_idx_a:bd_idx_b, bd_idx_a:bd_idx_b) * Q1;
         else
             if(b == 1)
-                bd_idx_c = bd_idx_a + d - 1;
-                bd_idx_d = bd_idx_b + r - 1;    
+                bd_idx_c = n - d + 1;
+                bd_idx_d = n;
             end
             
             A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) = transpose(Q1) * A(bd_idx_c:bd_idx_d, bd_idx_c:bd_idx_d) * Q1;
@@ -102,7 +133,7 @@ for u = 1:(n-2)
 
             w = A(bd_idx_c:bd_idx_d, bd_idx_a) + sign(A(bd_idx_c, bd_idx_a))*norm(A(bd_idx_c:bd_idx_d, bd_idx_a)).*unit;
             v = w./norm(w);
-            Q2 = eye(r) - 2*v(1:r)*transpose(v(1:r))
+            Q2 = eye(r) - 2*v(1:r)*transpose(v(1:r));
             
             % Compute new bottom/right neighbors of block-diagonal of A
             A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b) = transpose(Q2) * A(bd_idx_c:bd_idx_d, bd_idx_a:bd_idx_b);
@@ -115,7 +146,6 @@ for u = 1:(n-2)
             unit(1) = 1;
         end
     end
-%     A
 end
 
 A
