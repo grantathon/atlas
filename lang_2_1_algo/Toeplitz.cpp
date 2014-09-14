@@ -16,17 +16,19 @@ Toeplitz<T>::Toeplitz(int dim, int bandwidth)
     int absXY = 0;
 
     // Determine parameter validity
-    if(bandwidth >= dim)
+    if(bandwidth >= dim - 1)
     {
-        cout << "The bandwidth is larger than the m and/or n" << endl;
+        cout << "The bandwidth is larger than the matrix dimension" << endl;
     }
     
-    float *diagConsts = new float[bandwidth];
+    float *diagConsts = new float[bandwidth + 1];
 
     // Assigns "random" numbers to the diagonal constants
+    // for(size_t i = 0; i < (size_t)bandwidth; i++)
     for(size_t i = 0; i < (size_t)bandwidth + 1; i++)
     {
         diagConsts[i] = ((float)rand() / (float)RAND_MAX);
+        cout << diagConsts[i] << " ";
     }
 
     // Construct the Toeplitz matrix
@@ -48,7 +50,7 @@ Toeplitz<T>::Toeplitz(int dim, int bandwidth)
         }
     }
     
-    delete diagConsts;
+    delete[] diagConsts;
 }
 
 template <class T>
@@ -56,6 +58,12 @@ Toeplitz<T>::Toeplitz(int dim, int bandwidth, T* data)
     : Matrix<T>::Matrix(dim, dim, data)
 {
     this->bandwidth = bandwidth;
+
+    // Determine parameter validity
+    if(bandwidth >= dim - 1)
+    {
+        cout << "The bandwidth is larger than the matrix dimension" << endl;
+    }
 }
 
 template <class T>
@@ -70,11 +78,11 @@ int Toeplitz<T>::GetBandwidth() const
     return bandwidth;
 }
 
-template <class T>
-void Toeplitz<T>::SetBandwidth(int bw)
-{
-    bandwidth = bw;
-}
+// template <class T>
+// void Toeplitz<T>::SetBandwidth(int bw)
+// {
+//     bandwidth = bw;
+// }
 
 // Explicit template instantiations for supported types
 // template class Toeplitz<int>;

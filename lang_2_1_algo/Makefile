@@ -1,4 +1,4 @@
-CFLAGS = --ptxas-options=-v --use_fast_math --compiler-options -Wall
+CFLAGS = --ptxas-options=-v --use_fast_math --compiler-options -Wall -g
 INCLUDES =
 
 LDFLAGS = -L/opt/cuda/lib64

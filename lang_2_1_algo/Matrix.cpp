@@ -100,7 +100,12 @@ void Matrix<T>::ResetDimXY(int xDim, int yDim)
 template <class T>
 T* Matrix<T>::GetMatrixData() const
 {
-    return matrixData;
+    // return matrixData;
+
+    T *returnMatrixData = new T[xDim*yDim];
+    std::memcpy(returnMatrixData, matrixData, (size_t)xDim*yDim*sizeof(T));
+
+    return returnMatrixData;
 }
 
 template <class T>
@@ -231,6 +236,5 @@ void Matrix<T>::Print() const
 }
 
 // Explicit template instantiations for supported types
-// template class Matrix<int>;
 template class Matrix<float>;
 template class Matrix<double>;

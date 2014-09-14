@@ -24,7 +24,7 @@ public:
 
     // Getters/setters
     int GetBandwidth() const;
-    void SetBandwidth(int bw);
+    // void SetBandwidth(int bw);
 };
 
 #endif

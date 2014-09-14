@@ -4,6 +4,7 @@
 #include <iostream>
 #include <exception>
 #include <iomanip>
+#include <cstring>
 
 using namespace std;
 

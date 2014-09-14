@@ -16,8 +16,6 @@
 #define IDX2C(i, j, ld) (((j)*(ld))+(i))
 #define ZERO_TOL 1e-6
 
-// using namespace std;
-
 template <class T>
 class MatrixNumerics
 {
