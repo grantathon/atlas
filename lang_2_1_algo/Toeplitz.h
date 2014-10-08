@@ -6,6 +6,7 @@
 #include <iostream>
 #include <exception>
 #include <cstdlib>
+#include <string>
 
 using namespace std;
 
@@ -18,6 +19,7 @@ private:
 public:
     // Constructors/destructor
     Toeplitz();
+    Toeplitz(const string& fileURI);
     Toeplitz(int dim, int bandwidth);
     Toeplitz(int dim, int bandwidth, T* data);
     virtual ~Toeplitz();

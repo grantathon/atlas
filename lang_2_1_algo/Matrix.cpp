@@ -6,6 +6,59 @@ Matrix<T>::Matrix()
     // PURPOSELY EMPTY
 }
 
+// TODO: Encapsulate input file data extraction in another class
+template <class T>
+Matrix<T>::Matrix(const string& fileURI)
+{
+    ifstream file(fileURI.c_str());
+    string line;
+
+    // Determine the matrix dimension sizes
+    getline(file, line, '\n');
+    char_separator<char> sep(",");
+    tokenizer< char_separator<char> > tokens(line, sep);
+    int tokenIdx = 0;
+    BOOST_FOREACH(const string& token, tokens)
+    {
+        switch(tokenIdx++)
+        {
+            case 0:
+                this->xDim = atoi(token.c_str());
+                break;
+            case 1:
+                this->yDim = atoi(token.c_str());
+                break;
+            default:
+                throw "Too many tokens when defining dimensions in matrix input file.";
+                break;
+        }
+    }
+
+    // Allocate space for matrix
+    matrixData = new T[(this->xDim)*(this->yDim)];
+
+    // Retrieve matrix data
+    int x = 0;
+    int y = 0;
+    while(getline(file, line, '\n') != NULL)
+    {
+        tokens = tokenizer< char_separator<char> >(line, sep);
+
+        BOOST_FOREACH(const string& token, tokens)
+        {
+            size_t idx = (size_t)x + (size_t)y*(this->xDim);
+
+            matrixData[idx] = atof(token.c_str());
+            x++;
+        }
+
+        y++;
+        x = 0;
+    }
+
+    file.close();
+}
+
 template <class T>
 Matrix<T>::Matrix(int xDim, int yDim)
 {
@@ -100,8 +153,6 @@ void Matrix<T>::ResetDimXY(int xDim, int yDim)
 template <class T>
 T* Matrix<T>::GetMatrixData() const
 {
-    // return matrixData;
-
     T *returnMatrixData = new T[xDim*yDim];
     std::memcpy(returnMatrixData, matrixData, (size_t)xDim*yDim*sizeof(T));
 

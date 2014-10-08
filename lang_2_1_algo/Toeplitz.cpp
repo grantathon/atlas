@@ -7,6 +7,23 @@ Toeplitz<T>::Toeplitz()
 }
 
 template <class T>
+Toeplitz<T>::Toeplitz(const string& fileURI)
+    : Matrix<T>::Matrix(fileURI)
+{
+    // Determine bandwidth
+    int i;
+    for(i = 0; i < this->xDim; i++)
+    {
+        if(this->matrixData[i] == 0.0)
+        {
+            break;
+        }
+    }
+
+    this->bandwidth = i;
+}
+
+template <class T>
 Toeplitz<T>::Toeplitz(int dim, int bandwidth)
     : Matrix<T>::Matrix(dim, dim)
 {
@@ -24,7 +41,6 @@ Toeplitz<T>::Toeplitz(int dim, int bandwidth)
     float *diagConsts = new float[bandwidth + 1];
 
     // Assigns "random" numbers to the diagonal constants
-    // for(size_t i = 0; i < (size_t)bandwidth; i++)
     for(size_t i = 0; i < (size_t)bandwidth + 1; i++)
     {
         diagConsts[i] = ((float)rand() / (float)RAND_MAX);
@@ -85,6 +101,5 @@ int Toeplitz<T>::GetBandwidth() const
 // }
 
 // Explicit template instantiations for supported types
-// template class Toeplitz<int>;
 template class Toeplitz<float>;
 template class Toeplitz<double>;
