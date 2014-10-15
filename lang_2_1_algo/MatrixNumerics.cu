@@ -36,8 +36,64 @@ __global__ void ComputeRestrictedHouseholderMatrix(T *householderMatrix, T *hous
 }
 
 template <class T>
+__global__ void ComputeRestrictedHouseholderMatrix(T *inputMatrix, T *householderMatrix, int dim, int dummy)
+{
+    int x = threadIdx.x + blockIdx.x*blockDim.x;
+    int y = threadIdx.y + blockIdx.y*blockDim.y;
+    
+    if(x < dim && y < dim)
+    {
+        size_t idx = (size_t)x + (size_t)dim*y;
+
+        // Compute local alpha element for the householder vector
+        T *alpha;
+        *alpha = 0.0;
+        T localAlpha = 0.0;
+        if(x == 0 && y > 0)
+        {
+            localAlpha = powf(fabs(gInputMatrix[idx]), 2);  
+        }
+
+        atomicAdd(alpha, localAlpha);
+        __syncthreads();
+
+        // extern __shared__ T sAlphas[];
+        // size_t tid = threadIdx.x;
+        // if(x == 0 && y > 0)
+        // {
+        //     sAlphas[tid] = powf(fabs(gInputMatrix[idx]), 2);  
+        // }
+        // else
+        // {
+        //     sAlphas[tid]  = 0.0;
+        // }
+
+        // // Sum all alphas across all threads
+        // __syncthreads();
+        // for(int i = 0; i < dim*dim; i++)
+        // {
+
+        // }
+
+        // Find rho for Householder vector computation
+
+
+        // T x_val = householderVector[x];
+        // T y_val = householderVector[y];
+
+        if(x == y)  // Compute diagonal value
+        {
+            householderMatrix[IDX2C(y, x, dim)] = 1.0 - 2.0*powf(fabs(x_val), 2.0);
+        }
+        else  // Compute symmetric values
+        {
+            householderMatrix[IDX2C(y, x, dim)] = -2.0*x_val*y_val;
+        }
+    }
+}
+
+template <class T>
 Matrix<T>* MatrixNumerics<T>::GetRestrictedHouseholderMatrix(const Matrix<T>& columnVector, int householderDim, bool isTriangular)
-// Matrix<T>* MatrixNumerics<T>::GetRestrictedHouseholderMatrix(const Matrix<T>& columnVector, bool isTriangular)
 {
     float alpha = 0.0;
     float rho = 0.0;
@@ -148,6 +204,118 @@ Matrix<T>* MatrixNumerics<T>::GetRestrictedHouseholderMatrix(const Matrix<T>& co
     return householderMatrix;
 }
 
+template <class T>
+Matrix<T>* MatrixNumerics<T>::GetRestrictedHouseholderMatrix(T *gInputMatrix, int shift, int householderDim, bool isTriangular)
+{
+    float alpha = 0.0;
+    float rho = 0.0;
+    int dim = householderDim;
+    // Matrix<T> *householderVector = new Matrix<T>(1, dim, 0.0);
+    Matrix<T> *householderMatrix = new Matrix<T>(dim, dim, 0.0);
+
+    // Compute alpha parameter for the householder vector
+    // for(int i = 0; i < dim; i++)
+    // {
+    //     alpha += powf(fabs(columnVector.GetElement(0, i)), 2);
+    // }
+
+    // // Determine the type of householder vector to construct
+    // if(isTriangular)
+    // {
+    //     // Determine sign of alpha
+    //     if(columnVector.GetElement(0, 0) > 0)
+    //     {
+    //         alpha = sqrtf(alpha);
+    //     }
+    //     else
+    //     {
+    //         alpha = -sqrtf(alpha); 
+    //     }
+
+    //     // Initialize contents of householder vector
+    //     householderVector->SetElement(0, 0, columnVector.GetElement(0,0) + alpha);
+    //     for(int i = 1; i < dim; i++)
+    //     {
+    //         householderVector->SetElement(0, i, columnVector.GetElement(0, i));
+    //     }
+
+    //     // Compute rho parameter for the householder vector (i.e., 2-norm)
+    //     for(int i = 0; i < dim; i++)
+    //     {
+    //         rho += powf(fabs(householderVector->GetElement(0, i)), 2);
+    //     }
+    //     rho = sqrtf(rho);
+
+    //     // Finish constructing the householder vector
+    //     for(int i = 0; i < dim; i++)
+    //     {
+    //         householderVector->SetElement(0, i, householderVector->GetElement(0, i) / rho);
+    //     }
+    // }
+    // else
+    // {
+    //     // Determine sign of alpha
+    //     if(columnVector.GetElement(0, 0) > 0)
+    //     {
+    //         alpha = -sqrtf(alpha);
+    //     }
+    //     else
+    //     {
+    //         alpha = sqrtf(alpha); 
+    //     }
+
+    //     // Compute rho parameter for the householder vector
+    //     rho = sqrtf((powf(alpha, 2) - columnVector.GetElement(0, 0)*alpha) / 2);
+
+    //     // Construct the householder vector
+    //     householderVector->SetElement(0, 0, (columnVector.GetElement(0, 0) - alpha) / (2*rho));
+    //     for(int i = 1; i < dim; i++)
+    //     {
+    //         householderVector->SetElement(0, i, columnVector.GetElement(0, i) / (2*rho));
+    //     }
+    // }
+
+    // Setup GPU and compute the householder matrix
+    T *gHouseholderMatrix; //, *gHouseholderVector;
+    T *householderMatrixData = new T[dim*dim];
+    cudaMalloc(&gHouseholderMatrix, (size_t)dim*dim*sizeof(*gHouseholderMatrix)); CUDA_CHECK;
+    // cudaMalloc(&gHouseholderVector, (size_t)dim*sizeof(*gHouseholderVector)); CUDA_CHECK;
+    cudaMemset(gHouseholderMatrix, 0, (size_t)dim*dim*sizeof(*gHouseholderMatrix)); CUDA_CHECK;
+    // cudaMemcpy(gHouseholderVector, householderVector->GetMatrixData(), (size_t)dim*sizeof(*gHouseholderVector), cudaMemcpyHostToDevice); CUDA_CHECK;
+    // delete householderVector;
+
+    dim3 block = dim3(32, 32, 1);
+    dim3 grid = dim3(((dim + 1) + block.x-1)/block.x, ((dim + 1) + block.y-1)/block.y, 1);
+
+    ComputeRestrictedHouseholderMatrix<T><<<grid, block>>>(gInputMatrix, gHouseholderMatrix, dim, 1);
+    cudaMemcpy(householderMatrixData, gHouseholderMatrix, (size_t)dim*dim*sizeof(*gHouseholderMatrix), cudaMemcpyDeviceToHost); CUDA_CHECK;
+
+    for(int i = 0; i < dim; i++)
+    {
+        for(int j = 0; j < dim; j++)
+        {
+            float element = householderMatrixData[IDX2C(j, i, dim)];
+         
+            // Assign the new matrix element if greater than some zero tolerance
+            if(fabs(element) > ZERO_TOL)
+            {
+                householderMatrix->SetElement(j, i, element);
+            }
+            else
+            {
+                householderMatrix->SetElement(j, i, 0.0);
+            }
+        }  
+    }
+
+    // Free memory
+    cudaFree(gHouseholderMatrix);
+    // cudaFree(gHouseholderVector);
+    delete[] householderMatrixData;
+
+    return householderMatrix;
+}
+
 template <>
 void MatrixNumerics<float>::UpdateColumnRowPair(Matrix<float>& targetMatrix, const Matrix<float>& householderMatrix,
     const Matrix<float>& vector, int shift)
@@ -171,12 +339,6 @@ void MatrixNumerics<float>::UpdateColumnRowPair(Matrix<float>& targetMatrix, con
     // Initialize matrix and vector
     cublasSetMatrix(dim, dim, sizeof(*householderMatrix.GetMatrixData()), householderMatrix.GetMatrixData(), dim, cuHouseholderMatrix, dim);
     cublasSetVector(dim, sizeof(*vector.GetMatrixData()), vector.GetMatrixData(), 1, cuInputVector, 1);
-    // float *sourceData = householderMatrix.GetMatrixData();
-    // cublasSetMatrix(dim, dim, sizeof(*sourceData), sourceData, dim, cuHouseholderMatrix, dim);
-    // delete[] sourceData;
-    // sourceData = vector.GetMatrixData();
-    // cublasSetVector(dim, sizeof(*sourceData), sourceData, 1, cuInputVector, 1);
-    // delete[] sourceData;
 
     // Perform block pair computations
     cublasSgemv(handle, CUBLAS_OP_N, dim, dim, &alpha, cuHouseholderMatrix, dim, cuInputVector, 1, &beta, cuOutputVector, 1);
@@ -304,9 +466,6 @@ void MatrixNumerics<float>::UpdateMatrixBlockDiagonals(Matrix<float>& targetMatr
     
     // Initialize matrices
     cublasSetMatrix(dim, dim, sizeof(*householderMatrix.GetMatrixData()), householderMatrix.GetMatrixData(), dim, cuHouseholderMatrix, dim);
-    // float *sourceData = householderMatrix.GetMatrixData();
-    // cublasSetMatrix(dim, dim, sizeof(*sourceData), sourceData, dim, cuHouseholderMatrix, dim);
-    // delete[] sourceData;
     cublasSetMatrix(yDim, xDim, sizeof(*aMatrixData), aMatrixData, yDim, cuOldAMatrix, yDim);
 
     // std::cout << "1" << std::endl;
@@ -438,6 +597,11 @@ Matrix<T>* MatrixNumerics<T>::LangTridiagonalization21(const Toeplitz<T>& matrix
         int bandwidth = matrix.GetBandwidth();  // Bandwidth of square, banded matrix
         outputMatrix = new Toeplitz<T>(dim, bandwidth, matrix.GetMatrixData());
 
+        // Allocate device space for input matrix
+        T *gInputMatrix;
+        cudaMalloc(&gInputMatrix, (size_t)matrix.GetDimX()*matrix.GetDimY()*sizeof(*gInputMatrix)); CUDA_CHECK;
+        cudaMemcpy(gInputMatrix, matrix.GetMatrixData(), (size_t)matrix.GetDimX()*matrix.GetDimY()*sizeof(*gInputMatrix), cudaMemcpyHostToDevice); CUDA_CHECK;
+
         // std::cout << "dimension = " << dim << std::endl;
         // std::cout << "bandwidth = " << bandwidth << std::endl;
 
@@ -449,6 +613,7 @@ Matrix<T>* MatrixNumerics<T>::LangTridiagonalization21(const Toeplitz<T>& matrix
             remBlocks = dim - nu - bandwidth*(baseBlocks - 1) - 1;
             // std::cout << "baseBlocks = " << baseBlocks << std::endl;
             // std::cout << "remBlocks = " << remBlocks << std::endl;
+
             if(remBlocks > bandwidth)
             {
                 baseBlocks += (remBlocks / bandwidth);
@@ -471,7 +636,8 @@ Matrix<T>* MatrixNumerics<T>::LangTridiagonalization21(const Toeplitz<T>& matrix
             Matrix<T> *column = outputMatrix->GetBlock(nu, nu + 1, 1, bandwidth);
             // column->Print();
             // outputMatrix->Print();
-            Matrix<T> *householderMatrix = GetRestrictedHouseholderMatrix(*column, bandwidth, false);
+            // Matrix<T> *householderMatrix = GetRestrictedHouseholderMatrix(*column, bandwidth, false);
+            Matrix<T> *householderMatrix = GetRestrictedHouseholderMatrix(gInputMatrix, nu, bandwidth, false);
 
             // Update the colum/row pair of the main block
             MatrixNumerics<T>::UpdateColumnRowPair(*outputMatrix, *householderMatrix, *column, nu);

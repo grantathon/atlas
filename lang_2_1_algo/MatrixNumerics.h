@@ -36,6 +36,8 @@ public:
 
     static Matrix<T>* GetRestrictedHouseholderMatrix(const Matrix<T>& inputMatrix, int householderDim, bool isTriangular);
 
+    static Matrix<T>* GetRestrictedHouseholderMatrix(T *gInputMatrix, int shift, int householderDim, bool isTriangular);
+
     static Matrix<T>* LangTridiagonalization21(const Toeplitz<T>& inputMatrix);
 };
 

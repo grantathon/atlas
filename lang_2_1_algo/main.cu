@@ -32,17 +32,6 @@ using namespace std;
 
 int main(int argc, char **argv)
 {
-    // Matrix<float> *testMatrix = new Matrix<float>("../test_matrices/toeplitz_7_2.csv");
-
-    // cout << "finished testMatrix" << endl;
-
-    // Perform error checking for input parameters
-    // if(argc != 3)
-    // {
-    //     cout << "Enter correct amount of arguments {[dim] [diagCnt] [inputFile]} (inputFile is optional)." << endl;
-    //     return -1;
-    // }
-
     // Initialize computation parameters
     int dim = 0;
     int diagCnt = 0;
@@ -81,9 +70,8 @@ int main(int argc, char **argv)
             cout << "Enter correct amount of arguments {[dim] [diagCnt] [inputFile]} (inputFile is optional)." << endl;
             return -1;
     }
-
-    // Toeplitz<float> *toeplitz = new Toeplitz<float>(dim, diagCnt);
-    cout << endl << "Toeplitz before:" << endl;
+    
+    cout << endl << "Matrix before:" << endl;
     toeplitz->Print();
 
     // Start timer
@@ -96,11 +84,11 @@ int main(int argc, char **argv)
     // End timer
     timer.end();  t = timer.get();  // elapsed time in seconds
 
-    cout << endl << "Toeplitz after:" << endl;
+    cout << endl << "Matrix after:" << endl;
     triDiagMatrix->Print();
 
     // Display GPU run time
-    cout << "Elapsed time for LangTridiagonalization21(): " << t*1000<<" ms" << endl;
+    cout << "Elapsed time for LangTridiagonalization21: " << t*1000<<" ms" << endl;
 
     // Free heap memory
     delete triDiagMatrix;
